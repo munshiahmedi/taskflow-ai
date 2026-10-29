@@ -68,6 +68,7 @@ async function generateTaskDescription(req, res) {
     const statusCode = [429, 503, 504].includes(error.statusCode)
       ? error.statusCode
       : 502;
+
     const messages = {
       429: "AI description provider is rate limited. Try again shortly.",
       502: "Unable to generate a task description right now.",
@@ -124,10 +125,7 @@ async function createTask(req, res) {
       });
     }
 
-    if (
-      typeof description === "string" &&
-      description.length > 5000
-    ) {
+    if (typeof description === "string" && description.length > 5000) {
       return res.status(400).json({
         success: false,
         message: "Description must not exceed 5000 characters",
@@ -212,6 +210,37 @@ async function getTaskById(req, res) {
   }
 }
 
+// GET TASK HISTORY
+async function getTaskHistory(req, res) {
+  try {
+    const id = Number(req.params.id);
+
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Task ID must be a positive integer",
+      });
+    }
+
+    const history = await taskService.getTaskHistory(id, req.user);
+
+    return res.status(200).json({
+      success: true,
+      message: "Task history retrieved successfully",
+      history,
+    });
+  } catch (error) {
+    console.error("Get task history failed:", error.message);
+
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.statusCode
+        ? error.message
+        : "Internal server error",
+    });
+  }
+}
+
 // UPDATE TASK DETAILS
 async function updateTask(req, res) {
   try {
@@ -246,10 +275,7 @@ async function updateTask(req, res) {
       });
     }
 
-    if (
-      title !== undefined &&
-      title.trim().length > 255
-    ) {
+    if (title !== undefined && title.trim().length > 255) {
       return res.status(400).json({
         success: false,
         message: "Title must not exceed 255 characters",
@@ -267,10 +293,7 @@ async function updateTask(req, res) {
       });
     }
 
-    if (
-      typeof description === "string" &&
-      description.length > 5000
-    ) {
+    if (typeof description === "string" && description.length > 5000) {
       return res.status(400).json({
         success: false,
         message: "Description must not exceed 5000 characters",
@@ -428,10 +451,7 @@ async function updateTaskStatus(req, res) {
       });
     }
 
-    if (
-      typeof comment === "string" &&
-      comment.length > 2000
-    ) {
+    if (typeof comment === "string" && comment.length > 2000) {
       return res.status(400).json({
         success: false,
         message: "Comment must not exceed 2000 characters",
@@ -468,6 +488,7 @@ module.exports = {
   createTask,
   getTasks,
   getTaskById,
+  getTaskHistory,
   updateTask,
   deleteTask,
   assignTask,

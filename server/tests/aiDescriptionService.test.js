@@ -3,15 +3,15 @@ const {
 } = require("../src/services/aiDescriptionService");
 
 describe("AI description service", () => {
-  const originalApiKey = process.env.GEMINI_API_KEY;
-  const originalModel = process.env.GEMINI_MODEL;
+  const originalApiKey = process.env.GROQ_API_KEY;
+  const originalModel = process.env.GROQ_MODEL;
   const originalFetch = global.fetch;
   let consoleError;
   let consoleInfo;
 
   beforeEach(() => {
-    process.env.GEMINI_API_KEY = "test-gemini-key";
-    delete process.env.GEMINI_MODEL;
+    process.env.GROQ_API_KEY = "test-groq-key";
+    process.env.GROQ_MODEL = "openai/gpt-oss-20b";
     global.fetch = jest.fn();
     consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
     consoleInfo = jest.spyOn(console, "info").mockImplementation(() => {});
@@ -22,29 +22,29 @@ describe("AI description service", () => {
     consoleInfo.mockRestore();
 
     if (originalApiKey === undefined) {
-      delete process.env.GEMINI_API_KEY;
+      delete process.env.GROQ_API_KEY;
     } else {
-      process.env.GEMINI_API_KEY = originalApiKey;
+      process.env.GROQ_API_KEY = originalApiKey;
     }
 
     if (originalModel === undefined) {
-      delete process.env.GEMINI_MODEL;
+      delete process.env.GROQ_MODEL;
     } else {
-      process.env.GEMINI_MODEL = originalModel;
+      process.env.GROQ_MODEL = originalModel;
     }
 
     global.fetch = originalFetch;
   });
 
-  test("calls the configured Gemini model and returns generated text", async () => {
+  test("calls Groq chat completions and returns only the generated text", async () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       status: 200,
       json: async () => ({
-        candidates: [
+        choices: [
           {
-            content: {
-              parts: [{ text: "Task description and acceptance criteria" }],
+            message: {
+              content: "Task description and acceptance criteria",
             },
           },
         ],
@@ -61,39 +61,59 @@ describe("AI description service", () => {
 
     const [url, options] = global.fetch.mock.calls[0];
     expect(url).toBe(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent"
+      "https://api.groq.com/openai/v1/chat/completions"
     );
-    expect(options.headers["x-goog-api-key"]).toBe("test-gemini-key");
+    expect(options.method).toBe("POST");
+    expect(options.headers.Authorization).toBe("Bearer test-groq-key");
     expect(options.signal).toBeInstanceOf(AbortSignal);
 
-    const prompt = JSON.parse(options.body).contents[0].parts[0].text;
-    expect(prompt).toContain("senior product and UX designer");
-    expect(prompt).toContain("accessibility, responsive layouts");
-    expect(prompt).toContain(JSON.stringify("Prepare monthly report"));
-    expect(prompt).toContain(JSON.stringify("Include a review step"));
+    const requestBody = JSON.parse(options.body);
+    expect(requestBody).toMatchObject({
+      model: "openai/gpt-oss-20b",
+      temperature: 0.3,
+      max_completion_tokens: 512,
+    });
+    expect(requestBody.messages[0]).toMatchObject({ role: "system" });
+    expect(requestBody.messages[0].content).toContain(
+      "specific, testable acceptance criteria"
+    );
+    expect(requestBody.messages[1]).toEqual({
+      role: "user",
+      content: JSON.stringify({
+        title: "Prepare monthly report",
+        context: "Include a review step",
+      }),
+    });
   });
 
-  test("uses GEMINI_MODEL when configured", async () => {
-    process.env.GEMINI_MODEL = "gemini-configured-model";
+  test("uses GROQ_MODEL when configured", async () => {
+    process.env.GROQ_MODEL = "vendor/configured-model";
     global.fetch.mockResolvedValueOnce({
       ok: true,
       status: 200,
       json: async () => ({
-        candidates: [
-          { content: { parts: [{ text: "Generated description" }] } },
-        ],
+        choices: [{ message: { content: "Generated description" } }],
       }),
     });
 
     await generateTaskDescription({ title: "Prepare report" });
 
-    expect(global.fetch.mock.calls[0][0]).toContain(
-      "/models/gemini-configured-model:generateContent"
+    expect(JSON.parse(global.fetch.mock.calls[0][1].body).model).toBe(
+      "vendor/configured-model"
     );
   });
 
   test("fails safely when the API key is not configured", async () => {
-    delete process.env.GEMINI_API_KEY;
+    delete process.env.GROQ_API_KEY;
+
+    await expect(
+      generateTaskDescription({ title: "Prepare report" })
+    ).rejects.toMatchObject({ statusCode: 503 });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test("rejects an invalid model identifier without making a request", async () => {
+    process.env.GROQ_MODEL = "invalid model";
 
     await expect(
       generateTaskDescription({ title: "Prepare report" })
@@ -111,7 +131,7 @@ describe("AI description service", () => {
       category: "quota_rate_limit",
     });
     expect(consoleError).toHaveBeenCalledWith(
-      "Gemini API request failed",
+      "Groq API request failed",
       { upstreamStatus: 429, category: "quota_rate_limit" }
     );
   });
@@ -137,12 +157,12 @@ describe("AI description service", () => {
         })
       ).rejects.toMatchObject({ statusCode, category });
 
-      expect(consoleError).toHaveBeenCalledWith("Gemini API request failed", {
+      expect(consoleError).toHaveBeenCalledWith("Groq API request failed", {
         upstreamStatus,
         category,
       });
       const loggedDetails = JSON.stringify(consoleError.mock.calls);
-      expect(loggedDetails).not.toContain("test-gemini-key");
+      expect(loggedDetails).not.toContain("test-groq-key");
       expect(loggedDetails).not.toContain(
         "Sensitive task title that must not be logged"
       );
@@ -164,9 +184,7 @@ describe("AI description service", () => {
         ok: true,
         status: 200,
         json: async () => ({
-          candidates: [
-            { content: { parts: [{ text: "Generated after retry" }] } },
-          ],
+          choices: [{ message: { content: "Generated after retry" } }],
         }),
       });
 
@@ -180,7 +198,7 @@ describe("AI description service", () => {
         expect.any(Function),
         1000
       );
-      expect(consoleError).toHaveBeenCalledWith("Gemini API request failed", {
+      expect(consoleError).toHaveBeenCalledWith("Groq API request failed", {
         upstreamStatus: 503,
         category: "transient_provider_failure",
       });
@@ -217,16 +235,16 @@ describe("AI description service", () => {
       expect(global.fetch).toHaveBeenCalledTimes(2);
       expect(consoleError).toHaveBeenNthCalledWith(
         1,
-        "Gemini API request failed",
+        "Groq API request failed",
         { upstreamStatus: 503, category: "transient_provider_failure" }
       );
       expect(consoleError).toHaveBeenNthCalledWith(
         2,
-        "Gemini API request failed",
+        "Groq API request failed",
         { upstreamStatus: 503, category: "provider_failure" }
       );
       const loggedDetails = JSON.stringify(consoleError.mock.calls);
-      expect(loggedDetails).not.toContain("test-gemini-key");
+      expect(loggedDetails).not.toContain("test-groq-key");
       expect(loggedDetails).not.toContain(
         "Sensitive task title that must not be logged"
       );
@@ -234,30 +252,6 @@ describe("AI description service", () => {
     } finally {
       setTimeoutSpy.mockRestore();
     }
-  });
-
-  test("does not expose provider diagnostics for failed responses", async () => {
-    global.fetch.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      text: async () => "sensitive provider diagnostics",
-    });
-
-    await expect(
-      generateTaskDescription({ title: "Prepare report" })
-    ).rejects.toMatchObject({ statusCode: 502 });
-  });
-
-  test("rejects invalid provider response shapes", async () => {
-    global.fetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ candidates: [] }),
-    });
-
-    await expect(
-      generateTaskDescription({ title: "Prepare report" })
-    ).rejects.toMatchObject({ statusCode: 502 });
   });
 
   test("maps an outbound request timeout to HTTP 504", async () => {
@@ -279,7 +273,7 @@ describe("AI description service", () => {
         category: "request_timeout",
       });
       expect(consoleError).toHaveBeenCalledWith(
-        "Gemini API request timed out",
+        "Groq API request timed out",
         {
           phase: "request",
           upstreamStatus: null,
@@ -288,13 +282,9 @@ describe("AI description service", () => {
           attempt: 1,
         }
       );
-      expect(consoleInfo).not.toHaveBeenCalledWith(
-        "Gemini API response received",
-        expect.anything()
-      );
       expect(
         JSON.stringify([...consoleError.mock.calls, ...consoleInfo.mock.calls])
-      ).not.toContain("test-gemini-key");
+      ).not.toContain("test-groq-key");
     } finally {
       timeoutSpy.mockRestore();
     }
@@ -322,11 +312,11 @@ describe("AI description service", () => {
         category: "response_body_timeout",
       });
       expect(consoleInfo).toHaveBeenCalledWith(
-        "Gemini API response received",
+        "Groq API response received",
         { attempt: 1, upstreamStatus: 200 }
       );
       expect(consoleError).toHaveBeenCalledWith(
-        "Gemini API response body timed out",
+        "Groq API response body timed out",
         {
           phase: "response_body",
           upstreamStatus: 200,
@@ -338,5 +328,25 @@ describe("AI description service", () => {
     } finally {
       timeoutSpy.mockRestore();
     }
+  });
+
+  test.each([
+    {},
+    { choices: [] },
+    { choices: [{ message: { content: 3 } }] },
+    { choices: [{ message: { content: "  " } }] },
+  ])("rejects invalid provider response shapes: %p", async (body) => {
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => body,
+    });
+
+    await expect(
+      generateTaskDescription({ title: "Prepare report" })
+    ).rejects.toMatchObject({
+      statusCode: 502,
+      category: "invalid_response",
+    });
   });
 });

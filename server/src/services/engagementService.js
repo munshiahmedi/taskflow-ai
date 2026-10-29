@@ -89,6 +89,13 @@ async function createEngagement(data, user) {
     );
   }
 
+  if ([...name.trim()].length > 200) {
+    throw makeError(
+      "Engagement name must not exceed 200 characters",
+      400
+    );
+  }
+
   // Validate engagement kind.
   if (!["ONE_TIME", "RECURRING"].includes(engagementKind)) {
     throw makeError("Invalid engagement kind", 400);

@@ -92,8 +92,11 @@ app.get("/api/health/db", async (req, res) => {
     });
   } catch (error) {
     console.error(
-      "Database health check failed:",
-      error.message
+      "Database health check failed",
+      {
+        code: error.code || "UNKNOWN",
+        message: error.message,
+      }
     );
 
     res.status(500).json({

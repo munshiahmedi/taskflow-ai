@@ -143,6 +143,52 @@ describe("Recurring engagement validation", () => {
     expect(pool.execute).not.toHaveBeenCalled();
   });
 
+  test("should reject an empty engagement name", async () => {
+    await expect(
+      engagementService.createEngagement(
+        {
+          clientId: 1,
+          serviceTypeId: 2,
+          templateId: 2,
+          name: "   ",
+          engagementKind: "RECURRING",
+          periodStart: "2026-11-01",
+          periodEnd: "2026-11-30",
+        },
+        { id: 3, role: "MANAGER" }
+      )
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: "Valid positive clientId, serviceTypeId, templateId and name are required",
+    });
+
+    expect(pool.execute).not.toHaveBeenCalled();
+    expect(pool.getConnection).not.toHaveBeenCalled();
+  });
+
+  test("should reject an engagement name longer than 200 characters", async () => {
+    await expect(
+      engagementService.createEngagement(
+        {
+          clientId: 1,
+          serviceTypeId: 2,
+          templateId: 2,
+          name: "N".repeat(201),
+          engagementKind: "RECURRING",
+          periodStart: "2026-11-01",
+          periodEnd: "2026-11-30",
+        },
+        { id: 3, role: "MANAGER" }
+      )
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: "Engagement name must not exceed 200 characters",
+    });
+
+    expect(pool.execute).not.toHaveBeenCalled();
+    expect(pool.getConnection).not.toHaveBeenCalled();
+  });
+
   test("should reject an impossible calendar date", async () => {
     await expect(
       engagementService.createEngagement(
@@ -181,7 +227,7 @@ describe("Recurring engagement validation", () => {
     expect(pool.execute).not.toHaveBeenCalled();
   });
 
-  test("should create an engagement, generate tasks and commit the transaction", async () => {
+  test("should accept a 200-character engagement name and generate tasks", async () => {
     pool.execute
       .mockResolvedValueOnce([
         [
@@ -225,12 +271,13 @@ describe("Recurring engagement validation", () => {
 
     pool.getConnection.mockResolvedValueOnce(connection);
 
+    const name = "N".repeat(200);
     const result = await engagementService.createEngagement(
       {
         clientId: 1,
         serviceTypeId: 2,
         templateId: 2,
-        name: "November Monthly Engagement",
+        name,
         engagementKind: "RECURRING",
         periodStart: "2026-11-01",
         periodEnd: "2026-11-30",
@@ -243,7 +290,7 @@ describe("Recurring engagement validation", () => {
       client_id: 1,
       service_type_id: 2,
       template_id: 2,
-      name: "November Monthly Engagement",
+      name,
       engagement_kind: "RECURRING",
       recurrence_period_key: "2026-11",
       generated_task_count: 2,

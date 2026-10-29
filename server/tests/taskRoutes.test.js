@@ -48,31 +48,34 @@ describe("Task API routes", () => {
     );
   }
 
-  test("generates a task description for an authorized manager", async () => {
-    aiDescriptionService.generateTaskDescription.mockResolvedValueOnce(
-      "Description\n\nAcceptance criteria:\n- Work is verified"
-    );
+  test.each(["ADMIN", "MANAGER"])(
+    "generates a task description for an authorized %s",
+    async (role) => {
+      aiDescriptionService.generateTaskDescription.mockResolvedValueOnce(
+        "Description\n\nAcceptance criteria:\n- Work is verified"
+      );
 
-    const response = await request(app)
-      .post("/api/tasks/generate-description")
-      .set("Authorization", `Bearer ${token()}`)
-      .send({
+      const response = await request(app)
+        .post("/api/tasks/generate-description")
+        .set("Authorization", `Bearer ${token(role)}`)
+        .send({
+          title: "Prepare monthly report",
+          context: "Include required review steps",
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        success: true,
+        description:
+          "Description\n\nAcceptance criteria:\n- Work is verified",
+      });
+      expect(aiDescriptionService.generateTaskDescription).toHaveBeenCalledWith({
         title: "Prepare monthly report",
         context: "Include required review steps",
       });
-
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({
-      success: true,
-      description:
-        "Description\n\nAcceptance criteria:\n- Work is verified",
-    });
-    expect(aiDescriptionService.generateTaskDescription).toHaveBeenCalledWith({
-      title: "Prepare monthly report",
-      context: "Include required review steps",
-    });
-    expect(taskService.createTask).not.toHaveBeenCalled();
-  });
+      expect(taskService.createTask).not.toHaveBeenCalled();
+    }
+  );
 
   test("rejects description generation without authentication", async () => {
     const response = await request(app)

@@ -47,6 +47,8 @@ async function registerUser({ fullName, email, password }) {
 }
 
 async function loginUser({ email, password }) {
+  console.log("[LOGIN DEBUG] 1. Starting database lookup");
+
   const [users] = await pool.execute(
     `SELECT id, full_name, email, password_hash,
             role, is_active
@@ -56,14 +58,17 @@ async function loginUser({ email, password }) {
     [email]
   );
 
+  console.log("[LOGIN DEBUG] 2. Database lookup completed");
+
   const user = users[0];
 
-  // Use the same response for invalid email or password.
   if (!user) {
     const error = new Error("Invalid email or password");
     error.statusCode = 401;
     throw error;
   }
+
+  console.log("[LOGIN DEBUG] 3. User found; checking account status");
 
   if (!user.is_active) {
     const error = new Error("Account is inactive");
@@ -71,10 +76,14 @@ async function loginUser({ email, password }) {
     throw error;
   }
 
+  console.log("[LOGIN DEBUG] 4. Comparing password");
+
   const passwordMatches = await bcrypt.compare(
     password,
     user.password_hash
   );
+
+  console.log("[LOGIN DEBUG] 5. Password comparison completed");
 
   if (!passwordMatches) {
     const error = new Error("Invalid email or password");
@@ -82,7 +91,15 @@ async function loginUser({ email, password }) {
     throw error;
   }
 
+  console.log("[LOGIN DEBUG] 6. Checking JWT configuration");
+
   const jwt = require("jsonwebtoken");
+
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is missing from server environment");
+  }
+
+  console.log("[LOGIN DEBUG] 7. Signing token");
 
   const token = jwt.sign(
     {
@@ -95,15 +112,21 @@ async function loginUser({ email, password }) {
     }
   );
 
-  // Never return the password hash.
-  const safeUser = {
-    id: user.id,
-    fullName: user.full_name,
-    email: user.email,
-    role: user.role,
-  };
+  console.log("[LOGIN DEBUG] 8. Token created successfully");
 
-  return { token, user: safeUser };
+  return {
+    token,
+    user: {
+      id: user.id,
+      fullName: user.full_name,
+      email: user.email,
+      role: user.role,
+    },
+  };
 }
+
+
+
+
 
 module.exports = { registerUser, loginUser };

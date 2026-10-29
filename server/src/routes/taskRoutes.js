@@ -10,6 +10,7 @@ const {
   deleteTask,
   assignTask,
   updateTaskStatus,
+  getTaskHistory,
 } = require("../controllers/taskController");
 const { allowRoles } = require("../middleware/roleMiddleware");
 
@@ -40,5 +41,9 @@ router.patch(
   allowRoles("ADMIN", "MANAGER", "TEAM_MEMBER"),
   updateTaskStatus
 );
-
+router.get(
+  "/:id/history",
+  allowRoles("ADMIN", "MANAGER", "TEAM_MEMBER"),
+  getTaskHistory
+);
 module.exports = router;

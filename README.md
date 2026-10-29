@@ -117,16 +117,17 @@ DB_PASSWORD=<mysql_password>
 DB_NAME=taskflow_ai
 JWT_SECRET=<long_random_secret>
 JWT_EXPIRES_IN=1h
-GEMINI_API_KEY=<your_gemini_api_key>
-GEMINI_MODEL=gemini-3.8-flash
+GROQ_API_KEY=<your_groq_api_key>
+GROQ_MODEL=openai/gpt-oss-20b
 ```
 
 `PORT` defaults to `5000` if omitted. `JWT_EXPIRES_IN` is optional and defaults
 to `1h`. The database variables and `JWT_SECRET` must be configured for normal
-operation. `GEMINI_API_KEY` is required only for AI task-description
-generation. `GEMINI_MODEL` is optional and defaults to Google's
-`gemini-3.8-flash` model; set it to another supported model if needed. Keep the
-API key on the server and never expose it to the client.
+operation. `GROQ_API_KEY` is required only for AI task-description generation.
+`GROQ_MODEL` selects the Groq chat-completions model; the configured value is
+`openai/gpt-oss-20b`. Check the model's availability and rate limits for your
+Groq account before using it. Keep the API key on the server and never expose
+it to the client.
 
 The client currently has no API URL environment variable. Its Axios instance
 uses the fixed base URL `http://localhost:5000/api`; run the backend on that
@@ -229,10 +230,10 @@ There is no frontend automated test command configured in `client/package.json`.
   those operations are exposed through the backend API.
 - AI task-description generation is available through the backend API but is
   not yet integrated into the React task form. The endpoint sends the supplied
-  title and optional context to Google's Gemini API; do not include confidential
-  client information or other sensitive data in either field. Generated text
-  is returned for review and is not saved until a separate task-creation
-  request is made.
+  title and optional context to Groq; do not include confidential client
+  information or other sensitive data in either field. Generated text is
+  returned for review and is not saved until a separate task-creation request
+  is made.
 - There is no client registration screen, although the registration API route
   exists.
 - Password reset, email verification, and token refresh endpoints are not

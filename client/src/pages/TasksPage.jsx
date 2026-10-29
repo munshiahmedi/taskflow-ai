@@ -21,7 +21,6 @@ function TasksPage({ user, onLogout }) {
 
   const canCreateTasks = ["ADMIN", "MANAGER"].includes(user?.role);
 
-  // Fetch the latest dashboard statistics from the backend.
   const refreshDashboardStats = useCallback(async () => {
     try {
       const result = await getDashboardStats();
@@ -39,40 +38,60 @@ function TasksPage({ user, onLogout }) {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadHealth() {
       try {
         const response = await api.get("/health");
-        setHealth(response.data);
-        setHealthError("");
+
+        if (!cancelled) {
+          setHealth(response.data);
+          setHealthError("");
+        }
       } catch (err) {
-        setHealthError(
-          err.response?.data?.message ||
-            err.message ||
-            "Unable to check backend connection"
-        );
+        if (!cancelled) {
+          setHealthError(
+            err.response?.data?.message ||
+              err.message ||
+              "Unable to check backend connection"
+          );
+        }
       } finally {
-        setHealthLoading(false);
+        if (!cancelled) {
+          setHealthLoading(false);
+        }
       }
     }
 
     async function loadUserTasks() {
       try {
         const result = await getTasks();
-        setTasks(result);
-        setTasksError("");
+
+        if (!cancelled) {
+          setTasks(result);
+          setTasksError("");
+        }
       } catch (err) {
-        setTasksError(
-          err.response?.data?.message ||
-            err.message ||
-            "Unable to load tasks"
-        );
+        if (!cancelled) {
+          setTasksError(
+            err.response?.data?.message ||
+              err.message ||
+              "Unable to load tasks"
+          );
+        }
       } finally {
-        setTasksLoading(false);
+        if (!cancelled) {
+          setTasksLoading(false);
+        }
       }
     }
 
     loadHealth();
     loadUserTasks();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -108,14 +127,25 @@ function TasksPage({ user, onLogout }) {
     };
   }, []);
 
-  // Update the task list and refresh the dashboard after creation.
+  // Add a newly created task to the current list.
   function handleTaskCreated(newTask) {
     setTasks((currentTasks) => [newTask, ...currentTasks]);
     refreshDashboardStats();
   }
 
-  // Update the task list and refresh the dashboard after a status change.
+  // Update a task after its status changes.
   function handleStatusUpdated(updatedTask) {
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === updatedTask.id ? updatedTask : task
+      )
+    );
+
+    refreshDashboardStats();
+  }
+
+  // Update a task after its assignment changes.
+  function handleTaskAssigned(updatedTask) {
     setTasks((currentTasks) =>
       currentTasks.map((task) =>
         task.id === updatedTask.id ? updatedTask : task
@@ -138,6 +168,7 @@ function TasksPage({ user, onLogout }) {
 
   const displayName =
     user?.fullName || user?.name || user?.email || "User";
+
   const initials = displayName
     .split(/\s+/)
     .map((part) => part[0])
@@ -149,19 +180,29 @@ function TasksPage({ user, onLogout }) {
     <main className="app-shell">
       <header className="topbar">
         <div className="brand-lockup" aria-label="TaskFlow AI home">
-          <span className="brand-mark" aria-hidden="true">TF</span>
+          <span className="brand-mark" aria-hidden="true">
+            TF
+          </span>
+
           <span className="brand-name">
             TaskFlow <span className="brand-caption">AI workspace</span>
           </span>
         </div>
+
         <div className="user-menu">
           <div className="user-identity">
-            <span className="user-avatar" aria-hidden="true">{initials}</span>
+            <span className="user-avatar" aria-hidden="true">
+              {initials}
+            </span>
+
             <span className="user-details">
               <span className="user-name">{displayName}</span>
-              <span className="role-pill">{user?.role || "Unknown role"}</span>
+              <span className="role-pill">
+                {user?.role || "Unknown role"}
+              </span>
             </span>
           </div>
+
           <button
             className="button button--quiet"
             type="button"
@@ -176,13 +217,16 @@ function TasksPage({ user, onLogout }) {
         <div>
           <p className="eyebrow">Your workspace</p>
           <h1>Good work starts with clarity.</h1>
+
           <p className="welcome-copy">
             Here’s what’s happening across your tasks today.
           </p>
         </div>
+
         {healthLoading ? (
           <span className="connection-pill">
-            <span className="loading-dot" /> Checking connection
+            <span className="loading-dot" />
+            Checking connection
           </span>
         ) : healthError ? (
           <span className="connection-pill connection-pill--offline">
@@ -195,7 +239,10 @@ function TasksPage({ user, onLogout }) {
         )}
       </section>
 
-      <section className="dashboard-section" aria-label="Dashboard statistics">
+      <section
+        className="dashboard-section"
+        aria-label="Dashboard statistics"
+      >
         <div className="section-heading">
           <div>
             <h2>Task overview</h2>
@@ -203,14 +250,20 @@ function TasksPage({ user, onLogout }) {
               A quick read on workload and progress.
             </p>
           </div>
+
           {stats && (
-            <span className="section-meta">Live workspace totals</span>
+            <span className="section-meta">
+              Live workspace totals
+            </span>
           )}
         </div>
 
         {statsLoading && (
-          <p className="section-description">Loading dashboard statistics…</p>
+          <p className="section-description">
+            Loading dashboard statistics…
+          </p>
         )}
+
         {statsError && (
           <p className="dashboard-error" role="alert">
             Dashboard error: {statsError}
@@ -249,15 +302,17 @@ function TasksPage({ user, onLogout }) {
         </section>
       ) : (
         <p className="system-notice">
-          <strong>Work assigned to you</strong> — review your tasks below and
-          update their status as work progresses.
+          <strong>Work assigned to you</strong> — review your tasks
+          below and update their status as work progresses.
         </p>
       )}
 
       <section className="dashboard-section" aria-label="Tasks">
         {tasksLoading ? (
           <div className="task-section">
-            <p className="section-description">Loading your tasks…</p>
+            <p className="section-description">
+              Loading your tasks…
+            </p>
           </div>
         ) : tasksError ? (
           <p className="dashboard-error" role="alert">
@@ -268,6 +323,7 @@ function TasksPage({ user, onLogout }) {
             tasks={tasks}
             user={user}
             onStatusUpdated={handleStatusUpdated}
+            onTaskAssigned={handleTaskAssigned}
           />
         )}
       </section>

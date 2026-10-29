@@ -1,9 +1,17 @@
 
 import TaskCard from "./TaskCard";
 
-function TaskList({ tasks, user, onStatusUpdated }) {
+function TaskList({
+  tasks,
+  user,
+  onStatusUpdated,
+  onTaskAssigned,
+}) {
   return (
-    <section className="task-section" aria-labelledby="task-list-title">
+    <section
+      className="task-section"
+      aria-labelledby="task-list-title"
+    >
       <div className="section-heading">
         <div>
           <h2 id="task-list-title">Your tasks</h2>
@@ -11,6 +19,7 @@ function TaskList({ tasks, user, onStatusUpdated }) {
             Keep work moving and make the next step clear.
           </p>
         </div>
+
         <span className="section-meta">
           {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
         </span>
@@ -18,7 +27,13 @@ function TaskList({ tasks, user, onStatusUpdated }) {
 
       {tasks.length === 0 ? (
         <div className="empty-state">
-          <span className="empty-state__mark" aria-hidden="true">✓</span>
+          <span
+            className="empty-state__mark"
+            aria-hidden="true"
+          >
+            ✓
+          </span>
+
           <strong>You’re all caught up</strong>
           <p>New work will appear here when it’s ready.</p>
         </div>
@@ -30,6 +45,7 @@ function TaskList({ tasks, user, onStatusUpdated }) {
               task={task}
               user={user}
               onStatusUpdated={onStatusUpdated}
+              onTaskAssigned={onTaskAssigned}
             />
           ))}
         </div>

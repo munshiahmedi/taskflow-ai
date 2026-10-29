@@ -336,7 +336,29 @@ async function updateTaskStatus(id, newStatus, user, comment = null) {
 
   return rows[0];
 }
+async function getTaskHistory(id, user) {
+  // Reuse existing authorization rules for this task
+  await getAuthorizedTask(id, user);
 
+  const [rows] = await pool.execute(
+    `SELECT
+       th.id,
+       th.task_id,
+       th.actor_id,
+       u.full_name AS actor_name,
+       th.old_status,
+       th.new_status,
+       th.comment,
+       th.created_at
+     FROM task_history th
+     LEFT JOIN users u ON u.id = th.actor_id
+     WHERE th.task_id = ?
+     ORDER BY th.created_at ASC, th.id ASC`,
+    [id]
+  );
+
+  return rows;
+}
 module.exports = {
   createTask,
   getTasks,
@@ -344,5 +366,6 @@ module.exports = {
   updateTask,
   deleteTask,
   assignTask,
+  getTaskHistory,
   updateTaskStatus,
 };
