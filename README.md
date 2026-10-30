@@ -30,6 +30,9 @@ JWT in `sessionStorage` and attaches it as a bearer token. The Express
 application mounts API routes below `/api`; route middleware authenticates
 protected requests and enforces roles. Services perform database operations
 through the MySQL promise pool.
+Production frontend builds use `https://taskflow-ai-boto.onrender.com/api`.
+Local development can set `VITE_API_BASE_URL` to use a different API, or use
+the local backend default.
 
 ## Roles and permissions
 
@@ -238,5 +241,4 @@ There is no frontend automated test command configured in `client/package.json`.
   exists.
 - Password reset, email verification, and token refresh endpoints are not
   implemented in the current API routes.
-- The frontend API base URL is hard-coded to the local backend address.
 - Automated frontend component tests are not configured.
