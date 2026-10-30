@@ -36,8 +36,10 @@ application mounts API routes below `/api`; route middleware authenticates
 protected requests and enforces roles. Services perform database operations
 through the MySQL promise pool.
 Production frontend builds use
-`https://taskflow-ai-boto.onrender.com/api`. Local development can set
-`VITE_API_BASE_URL` to use a different API, or use the local backend default.
+`https://taskflow-ai-boto.onrender.com/api`. During local development, Axios
+sends requests to `/api` on the Vite origin, and Vite proxies them to
+`VITE_API_BASE_URL` (default `http://localhost:5000/api`). This also supports
+using the deployed API locally without browser CORS errors.
 
 ## Repository layout
 
@@ -187,9 +189,11 @@ normal operation. `GROQ_API_KEY` is required only for AI task-description genera
 Groq account before using it. Keep the API key on the server and never expose
 it to the client.
 
-For local client development, create `client/.env` with
-`VITE_API_BASE_URL=http://localhost:5000/api` (or your local API URL).
-Production builds intentionally use the configured Render backend URL.
+For local client development, optionally create `client/.env` with
+`VITE_API_BASE_URL=https://taskflow-ai-boto.onrender.com/api` to use the
+deployed API, or set it to `http://localhost:5000/api` to use a local backend.
+Vite reloads this setting when the development server starts. Production builds
+continue to use the configured Render backend URL directly.
 
 ## Run locally
 

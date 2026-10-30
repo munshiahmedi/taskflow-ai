@@ -3,7 +3,7 @@ import axios from "axios";
 
 const apiBaseUrl = import.meta.env.PROD
   ? "https://taskflow-ai-boto.onrender.com/api"
-  : import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+  : "/api";
 
 const api = axios.create({
   baseURL: apiBaseUrl,
