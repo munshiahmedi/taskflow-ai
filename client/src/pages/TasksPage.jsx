@@ -302,6 +302,14 @@ function TasksPage({ user, onLogout }) {
             <span className="sidebar-note__mark" aria-hidden="true">✦</span>
             <p>Make progress visible. Keep great work moving.</p>
           </div>
+          <button
+            className="button button--quiet sidebar-logout"
+            type="button"
+            onClick={onLogout}
+          >
+            <span className="sidebar-link__icon" aria-hidden="true">↪</span>
+            Log out
+          </button>
         </aside>
 
         <main className="dashboard-main">
@@ -310,6 +318,18 @@ function TasksPage({ user, onLogout }) {
               <span className="topbar-context__label">Workspace</span>
               <span className="topbar-context__title">{dashboardTitle}</span>
             </div>
+
+            {canCreateTasks && (
+              <button
+                className="button button--primary topbar-create-task"
+                type="button"
+                aria-label="Create task"
+                title="Create task"
+                onClick={() => setActiveSection("create-task")}
+              >
+                <span aria-hidden="true">+</span>
+              </button>
+            )}
 
             <div className="user-menu">
               <div className="user-identity">
@@ -323,13 +343,6 @@ function TasksPage({ user, onLogout }) {
                 </span>
               </div>
 
-              <button
-                className="button button--quiet"
-                type="button"
-                onClick={onLogout}
-              >
-                Log out
-              </button>
             </div>
           </header>
 

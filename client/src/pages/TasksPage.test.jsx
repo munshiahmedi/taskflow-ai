@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import api from "../api/axios";
 import { getDashboardStats } from "../api/dashboardApi";
@@ -47,9 +47,23 @@ describe("TasksPage role-based workspace", () => {
     );
 
     expect(await screen.findByText(roleLabel)).toBeVisible();
+    expect(
+      within(screen.getByRole("complementary")).getByRole("button", {
+        name: /log out/i,
+      })
+    ).toBeVisible();
+    expect(
+      within(screen.getByRole("banner")).queryByRole("button", {
+        name: /log out/i,
+      })
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /good to see you/i })).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Create a task" })).not.toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole("button", { name: "Create task" }));
+    expect(screen.getByRole("heading", { name: "Create a task" })).toBeVisible();
+
+    fireEvent.click(screen.getByRole("link", { name: "Overview" }));
     fireEvent.click(screen.getByRole("link", { name: /^tasks$/i }));
     expect(await screen.findByRole("heading", { name: "Task history" })).toBeVisible();
     expect(screen.queryByRole("heading", { name: "Task overview" })).not.toBeInTheDocument();
@@ -74,6 +88,9 @@ describe("TasksPage role-based workspace", () => {
     expect(screen.getByText("My workspace")).toBeVisible();
     expect(
       screen.queryByRole("link", { name: /create task/i })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Create task" })
     ).not.toBeInTheDocument();
     expect(screen.queryByText("Work assigned to you")).not.toBeInTheDocument();
 

@@ -385,7 +385,8 @@ a {
 .field input,
 .field select,
 .field textarea,
-.login-field input {
+.login-field input,
+.login-field select {
   width: 100%;
   min-height: 42px;
   border: 1px solid #dfe4ec;
@@ -412,7 +413,8 @@ a {
 .field input:focus,
 .field select:focus,
 .field textarea:focus,
-.login-field input:focus {
+.login-field input:focus,
+.login-field select:focus {
   border-color: #8178f0;
   outline: 0;
   box-shadow: 0 0 0 3px rgb(81 70 229 / 11%);
@@ -760,7 +762,41 @@ a {
   gap: 15px;
 }
 
-.login-field input {
+.login-form--registration {
+  gap: 12px;
+}
+
+.login-form--registration .login-field label {
+  margin-bottom: 5px;
+  font-size: 12px;
+}
+
+.login-form--registration .login-field input,
+.login-form--registration .login-field select {
+  min-height: 40px;
+  border-radius: 9px;
+  padding: 8px 11px;
+  font-size: 13px;
+}
+
+.login-form--registration .auth-password-control input {
+  padding-right: 64px;
+}
+
+.login-page--registration .login-card__intro {
+  margin-bottom: 16px;
+}
+
+.login-main--registration {
+  padding: 20px;
+}
+
+.login-main--registration .login-card {
+  padding: 18px;
+}
+
+.login-field input,
+.login-field select {
   min-height: 45px;
 }
 
@@ -1329,7 +1365,8 @@ body {
   font-size: 13px;
 }
 
-.login-field input {
+.login-field input,
+.login-field select {
   min-height: 49px;
   border-color: #e0e1ec;
   border-radius: 11px;
@@ -1373,41 +1410,64 @@ body {
 
 @media (max-width: 850px) {
   .login-page {
-    grid-template-columns: 1fr;
-    padding: 12px;
+    min-height: 100vh;
+    min-height: 100svh;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: center;
+    padding: 16px;
   }
 
-  .login-aside {
-    min-height: 245px;
-    padding: 26px 30px;
-  }
-
-  .login-aside__copy {
-    padding: 34px 0 12px;
-  }
-
-  .login-aside__copy h2 {
-    max-width: 650px;
-    font-size: clamp(32px, 6vw, 42px);
-  }
-
-  .login-aside__copy p {
-    display: block;
-    margin-top: 12px;
-    font-size: 13px;
-  }
-
-  .auth-benefits {
-    margin-top: 16px;
-  }
-
-  .login-aside__foot {
+  .login-page .login-aside {
     display: none;
   }
 
   .login-main {
-    min-height: 420px;
-    padding: 24px;
+    min-height: 0;
+    padding: 18px;
+  }
+
+  .login-main--registration {
+    padding: 14px;
+  }
+
+  .login-form {
+    gap: 12px;
+  }
+
+  .login-field label {
+    margin-bottom: 5px;
+    font-size: 12px;
+  }
+
+  .login-field input,
+  .login-field select {
+    min-height: 42px;
+    padding: 9px 11px;
+    font-size: 13px;
+  }
+
+  .login-form--registration {
+    gap: 9px;
+  }
+
+  .login-form--registration .login-field input,
+  .login-form--registration .login-field select {
+    min-height: 38px;
+    padding: 7px 10px;
+  }
+
+  .login-form--registration .field-hint {
+    margin-top: 3px;
+    font-size: 10px;
+  }
+
+  .login-page--registration .login-card__intro,
+  .login-card__intro {
+    margin-bottom: 14px;
+  }
+
+  .auth-switch {
+    margin-top: 14px;
   }
 }
 
@@ -1467,7 +1527,7 @@ body {
   }
 
   .login-page {
-    gap: 10px;
+    gap: 0;
     padding: 10px;
   }
 
@@ -1476,41 +1536,47 @@ body {
     border-radius: 21px;
   }
 
-  .login-aside {
-    min-height: 0;
-    padding: 22px;
-  }
-
-  .login-aside__copy {
-    padding: 36px 0 8px;
-  }
-
-  .login-aside__copy h2 {
-    font-size: 31px;
-  }
-
-  .login-aside__copy p {
-    max-width: 390px;
-    line-height: 1.55;
-  }
-
-  .auth-benefits {
-    gap: 6px;
-    margin-top: 14px;
-  }
-
-  .auth-benefits span {
-    padding: 7px 9px;
-    font-size: 10px;
-  }
-
   .login-main {
-    min-height: 0;
-    padding: 18px 9px;
+    padding: 12px;
+  }
+
+  .login-main--registration {
+    padding: 8px;
   }
 
   .login-card {
-    padding: 20px 14px;
+    padding: 14px 10px;
+  }
+
+  .login-main--registration .login-card {
+    padding: 8px 6px;
+  }
+
+  .login-card h1 {
+    font-size: 24px;
+  }
+
+  .login-card__intro {
+    margin-top: 6px;
+    font-size: 12px;
+  }
+
+  .login-form--registration {
+    gap: 7px;
+  }
+
+  .login-form--registration .login-field label {
+    margin-bottom: 3px;
+  }
+
+  .login-form--registration .login-field input,
+  .login-form--registration .login-field select {
+    min-height: 36px;
+  }
+
+  .login-submit {
+    min-height: 42px;
+    margin-top: 2px;
   }
 }
 
@@ -1638,6 +1704,12 @@ body {
   line-height: 1.55;
 }
 
+.sidebar-logout {
+  width: 100%;
+  justify-content: flex-start;
+  margin-top: 12px;
+}
+
 .dashboard-main {
   min-width: 0;
 }
@@ -1653,6 +1725,21 @@ body {
   background: rgb(255 255 255 / 88%);
   box-shadow: 0 5px 18px rgb(35 32 78 / 4%);
   backdrop-filter: blur(14px);
+}
+
+.topbar-create-task {
+  width: 38px;
+  min-height: 38px;
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 0;
+  border-radius: 11px;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.topbar-create-task + .user-menu {
+  margin-left: 14px;
 }
 
 .topbar-context {
@@ -1830,6 +1917,12 @@ body {
     gap: 4px;
   }
 
+  .sidebar-logout {
+    width: auto;
+    flex: 0 0 auto;
+    margin-top: 0;
+  }
+
   .sidebar-link {
     min-height: 39px;
     padding: 0 10px;
@@ -1853,6 +1946,10 @@ body {
     display: grid;
     gap: 10px;
     padding: 11px;
+  }
+
+  .sidebar-logout {
+    width: 100%;
   }
 
   .sidebar-nav {

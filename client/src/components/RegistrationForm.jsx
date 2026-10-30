@@ -58,7 +58,7 @@ function RegistrationForm({ onRegistered, onSwitchToLogin }) {
   }
 
   return (
-    <main className="login-page">
+    <main className="login-page login-page--registration">
       <aside className="login-aside">
         <div className="brand-lockup">
           <span className="brand-mark" aria-hidden="true">TF</span>
@@ -82,7 +82,7 @@ function RegistrationForm({ onRegistered, onSwitchToLogin }) {
         </p>
       </aside>
 
-      <section className="login-main">
+      <section className="login-main login-main--registration">
         <div className="login-card">
           <p className="login-card__eyebrow">Get started</p>
           <h1>Create your account</h1>
@@ -90,7 +90,10 @@ function RegistrationForm({ onRegistered, onSwitchToLogin }) {
             Set up your TaskFlow AI account to get started.
           </p>
 
-          <form className="login-form" onSubmit={handleSubmit}>
+          <form
+            className="login-form login-form--registration"
+            onSubmit={handleSubmit}
+          >
             <div className="login-field">
               <label htmlFor="registration-name">Full name</label>
               <input
@@ -119,6 +122,23 @@ function RegistrationForm({ onRegistered, onSwitchToLogin }) {
                 onChange={(event) => setEmail(event.target.value)}
                 required
               />
+            </div>
+
+            <div className="login-field">
+              <label htmlFor="registration-role">Role</label>
+              <select
+                id="registration-role"
+                name="role"
+                value="TEAM_MEMBER"
+                disabled
+                aria-describedby="registration-role-hint"
+              >
+                <option value="TEAM_MEMBER">Team member</option>
+              </select>
+              <span className="field-hint" id="registration-role-hint">
+                New accounts are team members. Workspace administrators manage
+                elevated roles.
+              </span>
             </div>
 
             <div className="login-field">

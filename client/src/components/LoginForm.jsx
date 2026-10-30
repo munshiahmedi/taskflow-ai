@@ -41,7 +41,7 @@ function LoginForm({
   }
 
   return (
-    <main className="login-page">
+    <main className="login-page login-page--login">
       <aside className="login-aside">
         <div className="brand-lockup">
           <span className="brand-mark" aria-hidden="true">TF</span>
@@ -65,7 +65,7 @@ function LoginForm({
         </p>
       </aside>
 
-      <section className="login-main">
+      <section className="login-main login-main--login">
         <div className="login-card">
           <p className="login-card__eyebrow">Welcome back</p>
           <h1>Sign in to your workspace</h1>

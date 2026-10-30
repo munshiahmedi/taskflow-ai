@@ -44,6 +44,8 @@ describe("RegistrationForm", () => {
       />
     );
 
+    expect(screen.getByLabelText("Role")).toHaveValue("TEAM_MEMBER");
+
     fillForm({
       fullName: " Taylor Example ",
       email: "TAYLOR@example.com",
