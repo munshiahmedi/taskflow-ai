@@ -48,13 +48,24 @@ describe("Dashboard API routes", () => {
     pool.execute.mockResolvedValueOnce([[
       {
         totalTasks: "6",
+        openTasks: "4",
+        assignedTasks: "5",
         notStartedTasks: "1",
         inProgressTasks: "2",
         waitingForClientTasks: "0",
         readyForReviewTasks: "1",
+        dueTodayTasks: "0",
         changesRequestedTasks: "0",
         completedTasks: "2",
         overdueTasks: "1",
+      },
+    ]]).mockResolvedValueOnce([[
+      {
+        totalUsers: "12",
+        totalManagers: "2",
+        totalTeamMembers: "9",
+        totalClients: "4",
+        totalEngagements: "6",
       },
     ]]);
 
@@ -65,13 +76,21 @@ describe("Dashboard API routes", () => {
     expect(response.status).toBe(200);
     expect(response.body.statistics).toEqual({
       totalTasks: 6,
+      openTasks: 4,
+      assignedTasks: 5,
       notStartedTasks: 1,
       inProgressTasks: 2,
       waitingForClientTasks: 0,
       readyForReviewTasks: 1,
+      dueTodayTasks: 0,
       changesRequestedTasks: 0,
       completedTasks: 2,
       overdueTasks: 1,
+      totalUsers: 12,
+      totalManagers: 2,
+      totalTeamMembers: 9,
+      totalClients: 4,
+      totalEngagements: 6,
     });
     expect(pool.execute).toHaveBeenCalledWith(
       expect.stringContaining("FROM tasks t"),
@@ -83,10 +102,13 @@ describe("Dashboard API routes", () => {
     pool.execute.mockResolvedValueOnce([[
       {
         totalTasks: 0,
+        openTasks: 0,
+        assignedTasks: 0,
         notStartedTasks: 0,
         inProgressTasks: 0,
         waitingForClientTasks: 0,
         readyForReviewTasks: 0,
+        dueTodayTasks: 0,
         changesRequestedTasks: 0,
         completedTasks: 0,
         overdueTasks: 0,
@@ -108,10 +130,13 @@ describe("Dashboard API routes", () => {
     pool.execute.mockResolvedValueOnce([[
       {
         totalTasks: "2",
+        openTasks: "2",
+        assignedTasks: "1",
         notStartedTasks: "1",
         inProgressTasks: "1",
         waitingForClientTasks: "0",
         readyForReviewTasks: "0",
+        dueTodayTasks: "1",
         changesRequestedTasks: "0",
         completedTasks: "0",
         overdueTasks: "0",

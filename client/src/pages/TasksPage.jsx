@@ -3,12 +3,28 @@ import { useCallback, useEffect, useState } from "react";
 import api from "../api/axios";
 import { getTasks, getTeamMembers } from "../api/tasksApi";
 import { getDashboardStats } from "../api/dashboardApi";
+import CatalogManagement from "../components/CatalogManagement";
 import CreateTaskForm from "../components/CreateTaskForm";
+import EngagementManagement from "../components/EngagementManagement";
 import TaskList from "../components/TaskList";
+import UserManagement from "../components/UserManagement";
 
 function TasksPage({ user, onLogout }) {
   const canCreateTasks = ["ADMIN", "MANAGER"].includes(user?.role);
+  const canManageUsers = user?.role === "ADMIN";
   const [activeSection, setActiveSection] = useState("overview");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return undefined;
+
+    function closeOnEscape(event) {
+      if (event.key === "Escape") setMobileNavOpen(false);
+    }
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [mobileNavOpen]);
 
   const [health, setHealth] = useState(null);
   const [healthError, setHealthError] = useState("");
@@ -195,16 +211,32 @@ function TasksPage({ user, onLogout }) {
     refreshDashboardStats();
   }
 
-  const dashboardCards = [
+  const taskDashboardCards = [
     { label: "Total Tasks", key: "totalTasks" },
-    { label: "Not Started", key: "notStartedTasks" },
-    { label: "In Progress", key: "inProgressTasks" },
+    { label: "Open Tasks", key: "openTasks" },
+    { label: "Due Today", key: "dueTodayTasks" },
     { label: "Waiting for Client", key: "waitingForClientTasks" },
-    { label: "Ready for Review", key: "readyForReviewTasks" },
-    { label: "Changes Requested", key: "changesRequestedTasks" },
-    { label: "Completed", key: "completedTasks" },
+    { label: "Waiting for Review", key: "readyForReviewTasks" },
     { label: "Overdue", key: "overdueTasks" },
   ];
+  const dashboardCards =
+    user?.role === "ADMIN"
+      ? [
+          { label: "Total Users", key: "totalUsers" },
+          { label: "Managers", key: "totalManagers" },
+          { label: "Team Members", key: "totalTeamMembers" },
+          { label: "Clients", key: "totalClients" },
+          { label: "Engagements", key: "totalEngagements" },
+          { label: "Total Tasks", key: "totalTasks" },
+          { label: "Open Tasks", key: "openTasks" },
+          { label: "Overdue Tasks", key: "overdueTasks" },
+        ]
+      : user?.role === "MANAGER"
+        ? [
+            { label: "Assigned Team Tasks", key: "assignedTasks" },
+            ...taskDashboardCards,
+          ]
+        : taskDashboardCards;
 
   const statisticsScope =
     user?.role === "ADMIN"
@@ -225,7 +257,7 @@ function TasksPage({ user, onLogout }) {
       ? "Admin dashboard"
       : user?.role === "MANAGER"
         ? "Manager dashboard"
-        : "My workspace";
+        : "Team member dashboard";
   const welcomeMessage =
     user?.role === "ADMIN"
       ? "Here’s the latest across your workspace."
@@ -246,8 +278,20 @@ function TasksPage({ user, onLogout }) {
 
   return (
     <div className="app-shell">
+      {mobileNavOpen && (
+        <button
+          className="sidebar-backdrop"
+          type="button"
+          aria-label="Dismiss navigation overlay"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
       <div className="dashboard-layout">
-        <aside className="sidebar">
+        <aside
+          className={`sidebar${mobileNavOpen ? " sidebar--mobile-open" : ""}`}
+          id="workspace-sidebar"
+          aria-label="Workspace navigation"
+        >
           <a className="sidebar-brand" href="#overview" aria-label="TaskFlow AI home">
             <span className="brand-mark" aria-hidden="true">
               TF
@@ -256,6 +300,13 @@ function TasksPage({ user, onLogout }) {
               TaskFlow <span className="brand-caption">AI workspace</span>
             </span>
           </a>
+          <button
+            className="button button--quiet sidebar-mobile-close"
+            type="button"
+            onClick={() => setMobileNavOpen(false)}
+          >
+            Close navigation
+          </button>
 
           <p className="sidebar-label">Workspace</p>
           <nav className="sidebar-nav" aria-label="Primary navigation">
@@ -264,7 +315,10 @@ function TasksPage({ user, onLogout }) {
                 activeSection === "overview" ? "sidebar-link--active" : ""
               }`}
               href="#overview"
-              onClick={() => setActiveSection("overview")}
+              onClick={() => {
+                setActiveSection("overview");
+                setMobileNavOpen(false);
+              }}
               aria-current={activeSection === "overview" ? "page" : undefined}
             >
               <span className="sidebar-link__icon" aria-hidden="true">⌂</span>
@@ -275,7 +329,10 @@ function TasksPage({ user, onLogout }) {
                 activeSection === "tasks" ? "sidebar-link--active" : ""
               }`}
               href="#tasks"
-              onClick={() => setActiveSection("tasks")}
+              onClick={() => {
+                setActiveSection("tasks");
+                setMobileNavOpen(false);
+              }}
               aria-current={activeSection === "tasks" ? "page" : undefined}
             >
               <span className="sidebar-link__icon" aria-hidden="true">▤</span>
@@ -287,13 +344,66 @@ function TasksPage({ user, onLogout }) {
                   activeSection === "create-task" ? "sidebar-link--active" : ""
                 }`}
                 href="#create-task"
-                onClick={() => setActiveSection("create-task")}
+                onClick={() => {
+                  setActiveSection("create-task");
+                  setMobileNavOpen(false);
+                }}
                 aria-current={
                   activeSection === "create-task" ? "page" : undefined
                 }
               >
                 <span className="sidebar-link__icon" aria-hidden="true">＋</span>
                 Create task
+              </a>
+            )}
+            {canCreateTasks && (
+              <a
+                className={`sidebar-link ${
+                  activeSection === "engagements" ? "sidebar-link--active" : ""
+                }`}
+                href="#engagements"
+                onClick={() => {
+                  setActiveSection("engagements");
+                  setMobileNavOpen(false);
+                }}
+                aria-current={
+                  activeSection === "engagements" ? "page" : undefined
+                }
+              >
+                <span className="sidebar-link__icon" aria-hidden="true">▧</span>
+                Engagements
+              </a>
+            )}
+            {canManageUsers && (
+              <a
+                className={`sidebar-link ${
+                  activeSection === "users" ? "sidebar-link--active" : ""
+                }`}
+                href="#users"
+                onClick={() => {
+                  setActiveSection("users");
+                  setMobileNavOpen(false);
+                }}
+                aria-current={activeSection === "users" ? "page" : undefined}
+              >
+                <span className="sidebar-link__icon" aria-hidden="true">♙</span>
+                Users
+              </a>
+            )}
+            {canManageUsers && (
+              <a
+                className={`sidebar-link ${
+                  activeSection === "catalog" ? "sidebar-link--active" : ""
+                }`}
+                href="#catalog"
+                onClick={() => {
+                  setActiveSection("catalog");
+                  setMobileNavOpen(false);
+                }}
+                aria-current={activeSection === "catalog" ? "page" : undefined}
+              >
+                <span className="sidebar-link__icon" aria-hidden="true">▦</span>
+                Clients &amp; templates
               </a>
             )}
           </nav>
@@ -305,7 +415,10 @@ function TasksPage({ user, onLogout }) {
           <button
             className="button button--quiet sidebar-logout"
             type="button"
-            onClick={onLogout}
+            onClick={() => {
+              setMobileNavOpen(false);
+              onLogout();
+            }}
           >
             <span className="sidebar-link__icon" aria-hidden="true">↪</span>
             Log out
@@ -314,6 +427,20 @@ function TasksPage({ user, onLogout }) {
 
         <main className="dashboard-main">
           <header className="topbar">
+            <button
+              className="button button--quiet sidebar-mobile-toggle"
+              type="button"
+              aria-label={
+                mobileNavOpen ? "Close navigation menu" : "Open navigation menu"
+              }
+              aria-controls="workspace-sidebar"
+              aria-expanded={mobileNavOpen}
+              onClick={() => setMobileNavOpen((isOpen) => !isOpen)}
+            >
+              <span aria-hidden="true" />
+              <span aria-hidden="true" />
+              <span aria-hidden="true" />
+            </button>
             <div className="topbar-context">
               <span className="topbar-context__label">Workspace</span>
               <span className="topbar-context__title">{dashboardTitle}</span>
@@ -467,6 +594,18 @@ function TasksPage({ user, onLogout }) {
                 )}
               </section>
             </>
+          )}
+
+          {activeSection === "users" && canManageUsers && (
+            <UserManagement currentUser={user} />
+          )}
+
+          {activeSection === "engagements" && canCreateTasks && (
+            <EngagementManagement />
+          )}
+
+          {activeSection === "catalog" && canManageUsers && (
+            <CatalogManagement />
           )}
         </main>
       </div>

@@ -76,8 +76,8 @@ Task status transitions enforced by the service:
   `CHANGES_REQUESTED`. A non-blank comment is required for
   `CHANGES_REQUESTED`.
 
-Public registration creates an active `TEAM_MEMBER` account. It does not allow
-the caller to select an administrative role.
+Public registration creates an active `TEAM_MEMBER` account and has no role
+selection. An authenticated administrator can list users and assign roles.
 
 ## Authentication and task workflow
 
@@ -152,9 +152,26 @@ creator; `task_history` references a task and actor. User email and selected
 template/engagement/task relationships have database uniqueness, lookup, and
 foreign-key constraints defined in the schema.
 
-The API has no general seed command or public ADMIN-creation flow. Public
-registration assigns `TEAM_MEMBER`; provision any initial administrator
-account through a trusted, secure database administration procedure.
+There is no public Admin registration endpoint. To create the first Admin,
+provide `INITIAL_ADMIN_NAME`, `INITIAL_ADMIN_EMAIL`, and
+`INITIAL_ADMIN_PASSWORD` through a trusted environment/secret manager, then run
+`npm run setup:initial-admin` from `server`. The command hashes the password,
+uses a MySQL advisory lock to prevent concurrent setup, and refuses to run if
+an Admin already exists. Clear the setup secrets after the command completes.
+Subsequent Admin accounts can only be promoted by an authenticated Admin.
+
+If an existing active Admin cannot log in, reset its password from an
+interactive terminal in the `server` directory:
+
+```powershell
+npm run reset:admin-password -- taskflow.admin.test@example.com
+```
+
+Replace the example with the exact email stored for the Admin. The command
+prompts twice without echoing the password, requires at least 12 characters
+including uppercase and lowercase letters, a number, and a symbol, and updates
+only the password hash for that active Admin. It cannot create an Admin or
+change roles. Do not pass the password as an argument or put it in `.env`.
 
 ## Environment configuration
 
@@ -261,6 +278,11 @@ role permissions listed above. All application routes are mounted under `/api`.
 | `POST` | `/api/tasks/generate-description` | ADMIN and MANAGER; accepts a task `title` and optional non-sensitive `context`, returns generated text without saving a task. |
 | `GET` | `/api/dashboard` | All three roles; returns statistics for the caller's permitted task scope. |
 | `GET` | `/api/users/team-members` | ADMIN and MANAGER; lists active team members with safe fields. |
+| `GET` | `/api/users` | ADMIN; lists safe user profiles and roles. |
+| `POST` | `/api/users` | ADMIN; creates MANAGER or TEAM_MEMBER accounts with a bcrypt-hashed password. |
+| `PUT` | `/api/users/:id` | ADMIN; updates a user's name and email. |
+| `PATCH` | `/api/users/:id/role` | ADMIN; assigns a valid role; cannot remove the last active Admin. |
+| `PATCH` | `/api/users/:id/status` | ADMIN; activates/deactivates a user, refusing to deactivate the last active Admin. |
 
 ## Tests and quality checks
 

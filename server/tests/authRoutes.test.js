@@ -205,6 +205,7 @@ describe("POST /api/auth/register", () => {
         fullName: " Test User ",
         email: "TEST@example.com",
         password: "Password123",
+        accountType: "MANAGER",
         role: "ADMIN",
       });
 

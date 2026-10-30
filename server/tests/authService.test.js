@@ -74,6 +74,7 @@ describe("authentication service registration", () => {
       fullName: "New Team Member",
       email: "new@example.com",
       password: "SecurePassword123",
+      accountType: "MANAGER",
       role: "ADMIN",
     });
 

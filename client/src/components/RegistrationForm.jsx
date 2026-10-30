@@ -125,23 +125,6 @@ function RegistrationForm({ onRegistered, onSwitchToLogin }) {
             </div>
 
             <div className="login-field">
-              <label htmlFor="registration-role">Role</label>
-              <select
-                id="registration-role"
-                name="role"
-                value="TEAM_MEMBER"
-                disabled
-                aria-describedby="registration-role-hint"
-              >
-                <option value="TEAM_MEMBER">Team member</option>
-              </select>
-              <span className="field-hint" id="registration-role-hint">
-                New accounts are team members. Workspace administrators manage
-                elevated roles.
-              </span>
-            </div>
-
-            <div className="login-field">
               <label htmlFor="registration-password">Password</label>
               <div className="auth-password-control">
                 <input
@@ -162,7 +145,20 @@ function RegistrationForm({ onRegistered, onSwitchToLogin }) {
                   aria-pressed={showPassword}
                   onClick={() => setShowPassword((visible) => !visible)}
                 >
-                  {showPassword ? "Hide" : "Show"}
+                  <svg
+                    className="auth-password-toggle__icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+                    <circle cx="12" cy="12" r="3" />
+                    {showPassword && <path d="m3 3 18 18" />}
+                  </svg>
                 </button>
               </div>
             </div>
@@ -195,7 +191,20 @@ function RegistrationForm({ onRegistered, onSwitchToLogin }) {
                     setShowConfirmPassword((visible) => !visible)
                   }
                 >
-                  {showConfirmPassword ? "Hide" : "Show"}
+                  <svg
+                    className="auth-password-toggle__icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+                    <circle cx="12" cy="12" r="3" />
+                    {showConfirmPassword && <path d="m3 3 18 18" />}
+                  </svg>
                 </button>
               </div>
             </div>

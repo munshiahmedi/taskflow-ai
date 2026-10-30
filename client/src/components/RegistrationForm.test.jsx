@@ -44,7 +44,7 @@ describe("RegistrationForm", () => {
       />
     );
 
-    expect(screen.getByLabelText("Role")).toHaveValue("TEAM_MEMBER");
+    expect(screen.queryByLabelText("Account Type")).not.toBeInTheDocument();
 
     fillForm({
       fullName: " Taylor Example ",
@@ -58,6 +58,8 @@ describe("RegistrationForm", () => {
         email: "taylor@example.com",
         password: "Password123",
       });
+      expect(registerUser.mock.calls[0][0]).not.toHaveProperty("role");
+      expect(registerUser.mock.calls[0][0]).not.toHaveProperty("accountType");
     });
     expect(onRegistered).toHaveBeenCalledWith("taylor@example.com");
   });
@@ -122,5 +124,17 @@ describe("RegistrationForm", () => {
     );
     expect(password).toHaveAttribute("type", "text");
     expect(confirmation).toHaveAttribute("type", "text");
+    const hidePasswordButton = screen.getByRole("button", {
+      name: "Hide password",
+    });
+    expect(hidePasswordButton.querySelector("svg")).toBeInTheDocument();
+    expect(hidePasswordButton).not.toHaveTextContent(/Show|Hide/);
+    const hideConfirmPasswordButton = screen.getByRole("button", {
+      name: "Hide confirm password",
+    });
+    expect(
+      hideConfirmPasswordButton.querySelector("svg")
+    ).toBeInTheDocument();
+    expect(hideConfirmPasswordButton).not.toHaveTextContent(/Show|Hide/);
   });
 });

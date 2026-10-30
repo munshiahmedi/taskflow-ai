@@ -13,22 +13,50 @@ function TaskList({
 }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [assigneeFilter, setAssigneeFilter] = useState("ALL");
+  const [clientFilter, setClientFilter] = useState("ALL");
+  const [dueDateFilter, setDueDateFilter] = useState("");
   const normalizedSearch = search.trim().toLowerCase();
+  const clients = [...new Map(
+    tasks
+      .filter((task) => task.client_id && task.client_name)
+      .map((task) => [task.client_id, task.client_name])
+  )];
+  const assignees = [...new Map(
+    tasks
+      .filter((task) => task.assigned_to && task.assigned_to_name)
+      .map((task) => [task.assigned_to, task.assigned_to_name])
+  )];
   const filteredTasks = tasks.filter((task) => {
     const matchesStatus =
       statusFilter === "ALL" || task.status === statusFilter;
+    const matchesAssignee =
+      assigneeFilter === "ALL" ||
+      String(task.assigned_to) === assigneeFilter;
+    const matchesClient =
+      clientFilter === "ALL" || String(task.client_id) === clientFilter;
+    const matchesDueDate =
+      !dueDateFilter || task.due_date?.slice(0, 10) === dueDateFilter;
     const searchableText = [
       task.id,
       task.title,
       task.description,
       task.assigned_to_name,
+      task.client_name,
+      task.engagement_name,
       task.status,
     ]
       .filter(Boolean)
       .join(" ")
       .toLowerCase();
 
-    return matchesStatus && searchableText.includes(normalizedSearch);
+    return (
+      matchesStatus &&
+      matchesAssignee &&
+      matchesClient &&
+      matchesDueDate &&
+      searchableText.includes(normalizedSearch)
+    );
   });
 
   return (
@@ -90,6 +118,41 @@ function TaskList({
                 <option value="CHANGES_REQUESTED">Changes requested</option>
                 <option value="COMPLETED">Completed</option>
               </select>
+            </div>
+            <div className="field">
+              <label htmlFor="task-assignee-filter">Filter by assignee</label>
+              <select
+                id="task-assignee-filter"
+                value={assigneeFilter}
+                onChange={(event) => setAssigneeFilter(event.target.value)}
+              >
+                <option value="ALL">All assignees</option>
+                {assignees.map(([id, name]) => (
+                  <option key={id} value={id}>{name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="task-client-filter">Filter by client</label>
+              <select
+                id="task-client-filter"
+                value={clientFilter}
+                onChange={(event) => setClientFilter(event.target.value)}
+              >
+                <option value="ALL">All clients</option>
+                {clients.map(([id, name]) => (
+                  <option key={id} value={id}>{name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="task-due-date-filter">Filter by deadline</label>
+              <input
+                id="task-due-date-filter"
+                type="date"
+                value={dueDateFilter}
+                onChange={(event) => setDueDateFilter(event.target.value)}
+              />
             </div>
           </div>
 

@@ -5,10 +5,13 @@ async function getDashboard(req, res, next) {
     let sql = `
       SELECT
         COUNT(*) AS totalTasks,
+        COALESCE(SUM(t.status <> 'COMPLETED'), 0) AS openTasks,
+        COALESCE(SUM(t.assigned_to IS NOT NULL), 0) AS assignedTasks,
         COALESCE(SUM(t.status = 'NOT_STARTED'), 0) AS notStartedTasks,
         COALESCE(SUM(t.status = 'IN_PROGRESS'), 0) AS inProgressTasks,
         COALESCE(SUM(t.status = 'WAITING_FOR_CLIENT'), 0) AS waitingForClientTasks,
         COALESCE(SUM(t.status = 'READY_FOR_REVIEW'), 0) AS readyForReviewTasks,
+        COALESCE(SUM(t.due_date = CURRENT_DATE()), 0) AS dueTodayTasks,
         COALESCE(SUM(t.status = 'CHANGES_REQUESTED'), 0) AS changesRequestedTasks,
         COALESCE(SUM(t.status = 'COMPLETED'), 0) AS completedTasks,
         COALESCE(
@@ -33,6 +36,27 @@ async function getDashboard(req, res, next) {
     const statistics = Object.fromEntries(
       Object.entries(row).map(([key, value]) => [key, Number(value)])
     );
+
+    if (req.user.role === "ADMIN") {
+      const [workspaceRows] = await pool.execute(
+        `SELECT
+           (SELECT COUNT(*) FROM users) AS totalUsers,
+           (SELECT COUNT(*) FROM users WHERE role = 'MANAGER') AS totalManagers,
+           (SELECT COUNT(*) FROM users WHERE role = 'TEAM_MEMBER') AS totalTeamMembers,
+           (SELECT COUNT(*) FROM clients) AS totalClients,
+           (SELECT COUNT(*) FROM engagements) AS totalEngagements`
+      );
+
+      Object.assign(
+        statistics,
+        Object.fromEntries(
+          Object.entries(workspaceRows[0]).map(([key, value]) => [
+            key,
+            Number(value),
+          ])
+        )
+      );
+    }
 
     return res.status(200).json({
       success: true,
