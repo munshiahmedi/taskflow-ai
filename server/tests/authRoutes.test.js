@@ -222,4 +222,79 @@ describe("POST /api/auth/login", () => {
       password: "Password123",
     });
   });
+
+  test("logs sanitized details for an unexpected login failure", async () => {
+    const originalDbUser = process.env.DB_USER;
+    const originalDbPassword = process.env.DB_PASSWORD;
+    const originalJwtSecret = process.env.JWT_SECRET;
+    const errorLog = jest.spyOn(console, "error").mockImplementation(() => {});
+    const loginError = Object.assign(
+      new Error(
+        "Database failure: login-password database-password signing-secret"
+      ),
+      {
+        code: "ER_ACCESS_DENIED_ERROR",
+        errno: 1045,
+        sqlState: "28000",
+        sql: "SELECT sensitive query",
+      }
+    );
+
+    process.env.DB_USER = "database-user";
+    process.env.DB_PASSWORD = "database-password";
+    process.env.JWT_SECRET = "signing-secret";
+    authService.loginUser.mockRejectedValueOnce(loginError);
+
+    try {
+      const response = await request(app)
+        .post("/api/auth/login")
+        .set("Authorization", "Bearer auth-token")
+        .send({
+          email: "test@example.com",
+          password: "login-password",
+        });
+
+      expect(response.status).toBe(500);
+      expect(response.body.message).toBe("Internal server error");
+      expect(errorLog).toHaveBeenCalledWith(
+        "Login failed",
+        expect.objectContaining({
+          name: "Error",
+          message: expect.stringContaining("Database failure"),
+          code: "ER_ACCESS_DENIED_ERROR",
+          errno: 1045,
+          sqlState: "28000",
+        })
+      );
+
+      const loggedDetails = JSON.stringify(errorLog.mock.calls);
+      for (const secret of [
+        "login-password",
+        "auth-token",
+        "database-user",
+        "database-password",
+        "signing-secret",
+        "sensitive query",
+      ]) {
+        expect(loggedDetails).not.toContain(secret);
+      }
+    } finally {
+      errorLog.mockRestore();
+      if (originalDbUser === undefined) {
+        delete process.env.DB_USER;
+      } else {
+        process.env.DB_USER = originalDbUser;
+      }
+      if (originalDbPassword === undefined) {
+        delete process.env.DB_PASSWORD;
+      } else {
+        process.env.DB_PASSWORD = originalDbPassword;
+      }
+      if (originalJwtSecret === undefined) {
+        delete process.env.JWT_SECRET;
+      } else {
+        process.env.JWT_SECRET = originalJwtSecret;
+      }
+    }
+  });
 });

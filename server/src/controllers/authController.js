@@ -3,6 +3,49 @@ const authService = require("../services/authService");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function logAuthError(action, error, req) {
+  const sensitiveValues = [
+    req.body?.password,
+    req.body?.email,
+    req.get("authorization"),
+    process.env.DB_USER,
+    process.env.DB_PASSWORD,
+    process.env.JWT_SECRET,
+    process.env.GROQ_API_KEY,
+  ].filter((value) => typeof value === "string" && value.length > 0);
+
+  const redact = (value) =>
+    sensitiveValues.reduce(
+      (sanitized, secret) =>
+        sanitized.split(secret).join("[REDACTED]"),
+      value
+    );
+
+  if (!(error instanceof Error)) {
+    console.error(`${action} failed`, { errorType: typeof error });
+    return;
+  }
+
+  const details = {
+    name: error.name,
+    message: redact(error.message),
+  };
+
+  for (const key of ["code", "errno", "sqlState"]) {
+    const value = error[key];
+
+    if (typeof value === "string" || typeof value === "number") {
+      details[key] = value;
+    }
+  }
+
+  if (error.stack) {
+    details.stack = redact(error.stack);
+  }
+
+  console.error(`${action} failed`, details);
+}
+
 // Register a new user
 async function register(req, res) {
   try {
@@ -57,11 +100,13 @@ async function register(req, res) {
       user,
     });
   } catch (error) {
-    console.error("Registration failed:", error);
+    if (!error?.statusCode || error.statusCode >= 500) {
+      logAuthError("Registration", error, req);
+    }
 
-    return res.status(error.statusCode || 500).json({
+    return res.status(error?.statusCode || 500).json({
       success: false,
-      message: error.statusCode
+      message: error?.statusCode
         ? error.message
         : "Internal server error",
     });
@@ -70,9 +115,6 @@ async function register(req, res) {
 
 // Login an existing user
 async function login(req, res) {
-  console.log("[TRACE] Login controller reached");
-  console.log("LOGIN FUNCTION CALLED");
-
   try {
     const { email, password } = req.body || {};
 
@@ -96,14 +138,10 @@ async function login(req, res) {
       });
     }
 
-    console.log("LOGIN VALIDATION PASSED");
-
     const result = await authService.loginUser({
       email: email.trim().toLowerCase(),
       password,
     });
-
-    console.log("LOGIN SERVICE SUCCEEDED");
 
     return res.status(200).json({
       success: true,
@@ -112,11 +150,13 @@ async function login(req, res) {
       user: result.user,
     });
   } catch (error) {
-    console.error("LOGIN FAILED:", error);
+    if (!error?.statusCode || error.statusCode >= 500) {
+      logAuthError("Login", error, req);
+    }
 
-    return res.status(error.statusCode || 500).json({
+    return res.status(error?.statusCode || 500).json({
       success: false,
-      message: error.statusCode
+      message: error?.statusCode
         ? error.message
         : "Internal server error",
     });
