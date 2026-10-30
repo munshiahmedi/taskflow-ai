@@ -1,12 +1,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import api from "../api/axios";
-import { getTasks } from "../api/tasksApi";
+import { getTasks, getTeamMembers } from "../api/tasksApi";
 import { getDashboardStats } from "../api/dashboardApi";
 import CreateTaskForm from "../components/CreateTaskForm";
 import TaskList from "../components/TaskList";
 
 function TasksPage({ user, onLogout }) {
+  const canCreateTasks = ["ADMIN", "MANAGER"].includes(user?.role);
+
   const [health, setHealth] = useState(null);
   const [healthError, setHealthError] = useState("");
   const [healthLoading, setHealthLoading] = useState(true);
@@ -15,11 +17,13 @@ function TasksPage({ user, onLogout }) {
   const [tasksLoading, setTasksLoading] = useState(true);
   const [tasksError, setTasksError] = useState("");
 
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [teamMembersLoading, setTeamMembersLoading] = useState(canCreateTasks);
+  const [teamMembersError, setTeamMembersError] = useState("");
+
   const [stats, setStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [statsError, setStatsError] = useState("");
-
-  const canCreateTasks = ["ADMIN", "MANAGER"].includes(user?.role);
 
   const refreshDashboardStats = useCallback(async () => {
     try {
@@ -95,6 +99,41 @@ function TasksPage({ user, onLogout }) {
   }, []);
 
   useEffect(() => {
+    if (!canCreateTasks) return undefined;
+
+    let cancelled = false;
+
+    async function loadTeamMembers() {
+      try {
+        const members = await getTeamMembers();
+
+        if (!cancelled) {
+          setTeamMembers(members);
+          setTeamMembersError("");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setTeamMembersError(
+            err.response?.data?.message ||
+              err.message ||
+              "Unable to load team members"
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setTeamMembersLoading(false);
+        }
+      }
+    }
+
+    loadTeamMembers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canCreateTasks]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function loadDashboardStats() {
@@ -166,8 +205,16 @@ function TasksPage({ user, onLogout }) {
     { label: "Overdue", key: "overdueTasks" },
   ];
 
+  const statisticsScope =
+    user?.role === "ADMIN"
+      ? "Counts across all workspace tasks."
+      : user?.role === "MANAGER"
+        ? "Counts for engagements you created."
+        : "Counts for tasks assigned to you.";
+
   const displayName =
     user?.fullName || user?.name || user?.email || "User";
+  const firstName = displayName.trim().split(/\s+/)[0];
 
   const initials = displayName
     .split(/\s+/)
@@ -215,11 +262,11 @@ function TasksPage({ user, onLogout }) {
 
       <section className="welcome">
         <div>
-          <p className="eyebrow">Your workspace</p>
-          <h1>Good work starts with clarity.</h1>
+          <p className="eyebrow">Your workspace · {user?.role || "Member"}</p>
+          <h1>Good to see you, {firstName}.</h1>
 
           <p className="welcome-copy">
-            Here’s what’s happening across your tasks today.
+            {statisticsScope} Here’s what needs your attention.
           </p>
         </div>
 
@@ -247,7 +294,7 @@ function TasksPage({ user, onLogout }) {
           <div>
             <h2>Task overview</h2>
             <p className="section-description">
-              A quick read on workload and progress.
+              {statisticsScope}
             </p>
           </div>
 
@@ -297,6 +344,9 @@ function TasksPage({ user, onLogout }) {
         <section className="dashboard-section">
           <CreateTaskForm
             user={user}
+            teamMembers={teamMembers}
+            teamMembersLoading={teamMembersLoading}
+            teamMembersError={teamMembersError}
             onTaskCreated={handleTaskCreated}
           />
         </section>
@@ -322,6 +372,9 @@ function TasksPage({ user, onLogout }) {
           <TaskList
             tasks={tasks}
             user={user}
+            teamMembers={teamMembers}
+            teamMembersLoading={teamMembersLoading}
+            teamMembersError={teamMembersError}
             onStatusUpdated={handleStatusUpdated}
             onTaskAssigned={handleTaskAssigned}
           />

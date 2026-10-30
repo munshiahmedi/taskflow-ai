@@ -4,7 +4,30 @@ const cors = require("cors");
 const pool = require("./config/db");
 
 const app = express();
-app.use(cors());
+app.set("trust proxy", 1);
+
+const configuredOrigins = process.env.CORS_ORIGINS
+  ?.split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowedOrigins = new Set(
+  configuredOrigins?.length
+    ? configuredOrigins
+    : [
+        "https://taskflow-ai-frontend-mukm.onrender.com",
+        ...(process.env.NODE_ENV === "production"
+          ? []
+          : ["http://localhost:5173", "http://127.0.0.1:5173"]),
+      ]
+);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      callback(null, !origin || allowedOrigins.has(origin));
+    },
+  })
+);
 app.use(express.json());
 
 const taskRoutes = require("./routes/taskRoutes");

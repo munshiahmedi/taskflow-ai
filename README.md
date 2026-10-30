@@ -5,6 +5,9 @@ administrators can manage engagements and tasks, assign work to active team
 members, and review submitted work. The dashboard summarizes task status and
 overdue counts for the signed-in user's permitted data scope.
 
+**Live application:** [Frontend](https://taskflow-ai-frontend-mukm.onrender.com) ·
+[Backend health](https://taskflow-ai-boto.onrender.com/api/health)
+
 ## Features
 
 - JWT-based registration and login, with password hashing and active-account
@@ -18,6 +21,8 @@ overdue counts for the signed-in user's permitted data scope.
 - Dashboard statistics filtered by role.
 - A React interface for login, task creation and assignment, task updates, and
   dashboard statistics.
+- Public registration for `TEAM_MEMBER` accounts, plus task search and status
+  filtering in the task list.
 
 ## Technology and architecture
 
@@ -30,9 +35,27 @@ JWT in `sessionStorage` and attaches it as a bearer token. The Express
 application mounts API routes below `/api`; route middleware authenticates
 protected requests and enforces roles. Services perform database operations
 through the MySQL promise pool.
-Production frontend builds use `https://taskflow-ai-boto.onrender.com/api`.
-Local development can set `VITE_API_BASE_URL` to use a different API, or use
-the local backend default.
+Production frontend builds use
+`https://taskflow-ai-boto.onrender.com/api`. Local development can set
+`VITE_API_BASE_URL` to use a different API, or use the local backend default.
+
+## Repository layout
+
+```text
+client/
+  src/api/           Axios instance and API helpers
+  src/components/    Authentication and task UI
+  src/pages/         Authenticated task dashboard
+  src/test/          Vitest setup
+server/
+  sql/schema.sql     MySQL tables, keys, and relationships
+  src/config/        Database pool
+  src/controllers/   HTTP request handlers
+  src/middleware/    Authentication, role checks, rate limits, errors
+  src/routes/        Express route definitions
+  src/services/      Business rules and database operations
+  tests/             Jest API and service tests
+```
 
 ## Roles and permissions
 
@@ -53,6 +76,21 @@ Task status transitions enforced by the service:
 
 Public registration creates an active `TEAM_MEMBER` account. It does not allow
 the caller to select an administrative role.
+
+## Authentication and task workflow
+
+Registration validates the submitted name, email, and password, normalizes the
+email, and stores only a bcrypt password hash. Login compares the submitted
+password with that hash and returns a signed JWT with safe user fields. The
+client keeps the token in `sessionStorage`, attaches it to Axios requests, and
+checks the current identity through `/api/auth/me`; logout removes the local
+session. Login and registration endpoints have per-IP rate limits.
+
+Team members move assigned work through the permitted work statuses and
+submit completed work for review. Managers and administrators can approve
+ready-for-review tasks or request changes; a non-empty comment is required
+when requesting changes. Successful status changes are recorded in
+`task_history`.
 
 ## Prerequisites
 
@@ -81,11 +119,19 @@ Create a database whose name matches `DB_NAME`, for example:
 CREATE DATABASE taskflow_ai;
 ```
 
-**Schema setup is not automated in this repository.** No SQL schema, migration,
-or schema-creation script is included, and the application does not create its
-tables on startup. Before running the API, apply the project's compatible
-MySQL schema using your database administration process. The application code
-uses these tables:
+The DDL is provided in [`server/sql/schema.sql`](server/sql/schema.sql). The
+application does not create tables or seed data on startup. Apply this schema
+to a newly created database using a trusted MySQL client before running the
+API. After configuring `server/.env`, the project helper runs it with the
+configured database settings:
+
+```powershell
+cd server
+npm run db:schema
+```
+
+Only run this against a new, empty application database; it creates tables and
+does not migrate or seed an existing database. It creates these tables:
 
 - `users`
 - `clients`
@@ -96,11 +142,13 @@ uses these tables:
 - `tasks`
 - `task_history`
 
-The schema must include the columns and relationships used by the server
-queries, including user roles and account activity, task assignment/status,
-engagement ownership, and template items. The exact DDL, indexes, constraints,
-and seed data need to be supplied or confirmed separately; they cannot be
-derived safely from this repository alone.
+`task_templates.service_type_id` references `service_types.id`;
+`task_template_items.template_id` references `task_templates.id`;
+`engagements` reference a client, service type, template, and creator;
+`tasks` reference an engagement, optional template item and assignee, and
+creator; `task_history` references a task and actor. User email and selected
+template/engagement/task relationships have database uniqueness, lookup, and
+foreign-key constraints defined in the schema.
 
 The API has no general seed command or public ADMIN-creation flow. Public
 registration assigns `TEAM_MEMBER`; provision any initial administrator
@@ -115,26 +163,33 @@ credentials or signing secrets.
 ```dotenv
 PORT=5000
 DB_HOST=localhost
+DB_PORT=3306
 DB_USER=<mysql_user>
 DB_PASSWORD=<mysql_password>
 DB_NAME=taskflow_ai
+DB_SSL=false
+DB_SSL_CA=
 JWT_SECRET=<long_random_secret>
 JWT_EXPIRES_IN=1h
+CORS_ORIGINS=http://localhost:5173
 GROQ_API_KEY=<your_groq_api_key>
 GROQ_MODEL=openai/gpt-oss-20b
 ```
 
-`PORT` defaults to `5000` if omitted. `JWT_EXPIRES_IN` is optional and defaults
-to `1h`. The database variables and `JWT_SECRET` must be configured for normal
-operation. `GROQ_API_KEY` is required only for AI task-description generation.
+`PORT` defaults to `5000`, `DB_PORT` to `3306`, and `JWT_EXPIRES_IN` to `1h`.
+`DB_SSL=true` enables TLS certificate verification; `DB_SSL_CA` optionally
+points to a CA file. `CORS_ORIGINS` is a comma-separated allowlist; by default
+the deployed frontend is allowed, and local Vite origins are included outside
+production. The database variables and `JWT_SECRET` must be configured for
+normal operation. `GROQ_API_KEY` is required only for AI task-description generation.
 `GROQ_MODEL` selects the Groq chat-completions model; the configured value is
 `openai/gpt-oss-20b`. Check the model's availability and rate limits for your
 Groq account before using it. Keep the API key on the server and never expose
 it to the client.
 
-The client currently has no API URL environment variable. Its Axios instance
-uses the fixed base URL `http://localhost:5000/api`; run the backend on that
-address for the current client configuration.
+For local client development, create `client/.env` with
+`VITE_API_BASE_URL=http://localhost:5000/api` (or your local API URL).
+Production builds intentionally use the configured Render backend URL.
 
 ## Run locally
 
@@ -214,15 +269,56 @@ npm test
 
 The configured command is Jest with `--runInBand`.
 
-Run client lint and production build from the client directory:
+Run frontend component tests, lint, and production build from the client
+directory:
 
 ```powershell
 cd client
+npm test
 npm run lint
 npm run build
 ```
 
-There is no frontend automated test command configured in `client/package.json`.
+GitHub Actions runs backend tests and the frontend test, lint, and build
+commands on pushes to `main` and pull requests.
+
+## Screenshots and demo
+
+Add current screenshots to `docs/screenshots/` and link them here:
+
+- Registration and sign-in
+- Manager dashboard with task assignment and filters
+- Team-member dashboard and task status workflow
+- Mobile-width dashboard
+
+**Demo video:** [Add a short walkthrough link here](#).
+
+## Portfolio summary
+
+**Project description:** TaskFlow AI is a full-stack task and engagement
+management app with role-aware work queues, task assignment and review,
+status-history tracking, and dashboard statistics. It pairs a React/Vite
+client with an Express API and MySQL persistence, using JWT sessions,
+bcrypt password hashing, and server-side authorization.
+
+**Stack:** React, Vite, Axios, Node.js, Express, MySQL, JWT, bcrypt, Jest,
+Vitest, and Testing Library.
+
+**Demo recording checklist:**
+
+1. Show registration, then sign in as a team member.
+2. Show the scoped dashboard and search/status filters.
+3. Demonstrate a permitted task status change and its history.
+4. Sign in as a manager to show assignment and review actions.
+5. Show a blocked/unauthorized action or API response without exposing
+   credentials or private data.
+6. Capture desktop and narrow/mobile layouts; use seeded demo data only.
+
+**LinkedIn project description:** Built TaskFlow AI, a full-stack React and
+Node.js application for role-based task and engagement management. Implemented
+JWT authentication, bcrypt password hashing, MySQL-backed APIs, scoped
+permissions for admins/managers/team members, task assignment and review
+workflows, and dashboards with task search and filtering.
 
 ## Known limitations
 
@@ -231,14 +327,22 @@ There is no frontend automated test command configured in `client/package.json`.
 - The client currently provides login and task/dashboard workflows, not
   management screens for clients, service types, templates, or engagements;
   those operations are exposed through the backend API.
+- Task editing and deletion are exposed by the API but do not have corresponding
+  client controls. The app does not yet include a user/role administration
+  screen.
 - AI task-description generation is available through the backend API but is
   not yet integrated into the React task form. The endpoint sends the supplied
   title and optional context to Groq; do not include confidential client
   information or other sensitive data in either field. Generated text is
   returned for review and is not saved until a separate task-creation request
   is made.
-- There is no client registration screen, although the registration API route
-  exists.
+- Public registration is available from the sign-in screen and creates a
+  `TEAM_MEMBER` account; new users sign in after registration.
 - Password reset, email verification, and token refresh endpoints are not
   implemented in the current API routes.
-- Automated frontend component tests are not configured.
+- The frontend API URL for production is currently set in the Axios
+  configuration rather than injected through a Render build variable.
+- JWT role and account claims are used until the token expires; an account or
+  role change does not revoke already-issued tokens immediately.
+- Automated responsive checks and a current demo recording have not been
+  added to the repository.

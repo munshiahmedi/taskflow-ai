@@ -2,8 +2,13 @@
 import { useState } from "react";
 import { loginUser } from "../api/authApi";
 
-function LoginForm({ onLogin }) {
-  const [email, setEmail] = useState("");
+function LoginForm({
+  initialEmail = "",
+  registrationComplete = false,
+  onLogin,
+  onSwitchToRegister,
+}) {
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -49,6 +54,11 @@ function LoginForm({ onLogin }) {
             Bring tasks, reviews, and team progress into one calm, focused
             workspace.
           </p>
+          <div className="auth-benefits" aria-label="Workspace highlights">
+            <span>Clear ownership</span>
+            <span>Thoughtful reviews</span>
+            <span>Visible progress</span>
+          </div>
         </div>
         <p className="login-aside__foot">
           A clearer view of work, from start to done.
@@ -65,9 +75,9 @@ function LoginForm({ onLogin }) {
 
           <form className="login-form" onSubmit={handleSubmit}>
             <div className="login-field">
-              <label htmlFor="email">Email address</label>
+              <label htmlFor="login-email">Email address</label>
               <input
-                id="email"
+                id="login-email"
                 type="email"
                 autoComplete="username"
                 placeholder="you@company.com"
@@ -78,9 +88,9 @@ function LoginForm({ onLogin }) {
             </div>
 
             <div className="login-field">
-              <label htmlFor="password">Password</label>
+              <label htmlFor="login-password">Password</label>
               <input
-                id="password"
+                id="login-password"
                 type="password"
                 autoComplete="current-password"
                 placeholder="Enter your password"
@@ -99,11 +109,24 @@ function LoginForm({ onLogin }) {
             </button>
           </form>
 
+          {registrationComplete && (
+            <p className="auth-success" role="status">
+              Account created. Sign in with your new account.
+            </p>
+          )}
+
           {error && (
             <p className="inline-error login-error" role="alert">
               {error}
             </p>
           )}
+
+          <p className="auth-switch">
+            Don&apos;t have an account?{" "}
+            <button type="button" onClick={onSwitchToRegister}>
+              Register
+            </button>
+          </p>
         </div>
       </section>
     </main>

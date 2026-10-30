@@ -1,10 +1,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import LoginForm from "./components/LoginForm";
+import RegistrationForm from "./components/RegistrationForm";
 import TasksPage from "./pages/TasksPage";
 import { getCurrentUser } from "./api/authApi";
 
 function App() {
+  const [authView, setAuthView] = useState("login");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [registrationComplete, setRegistrationComplete] = useState(false);
   const [token, setToken] = useState(() =>
     sessionStorage.getItem("taskflow_token")
   );
@@ -113,7 +117,30 @@ function App() {
   }
 
   if (!token || !user) {
-    return <LoginForm onLogin={handleLogin} />;
+    if (authView === "register") {
+      return (
+        <RegistrationForm
+          onSwitchToLogin={() => setAuthView("login")}
+          onRegistered={(email) => {
+            setLoginEmail(email);
+            setRegistrationComplete(true);
+            setAuthView("login");
+          }}
+        />
+      );
+    }
+
+    return (
+      <LoginForm
+        initialEmail={loginEmail}
+        registrationComplete={registrationComplete}
+        onLogin={handleLogin}
+        onSwitchToRegister={() => {
+          setRegistrationComplete(false);
+          setAuthView("register");
+        }}
+      />
+    );
   }
 
   return <TasksPage user={user} onLogout={handleLogout} />;

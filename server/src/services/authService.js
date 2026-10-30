@@ -25,7 +25,7 @@ async function registerUser({ fullName, email, password }) {
     );
 
     const [rows] = await pool.execute(
-      `SELECT id, full_name, email, role, is_active, created_at
+      `SELECT id, full_name AS fullName, email, role
        FROM users
        WHERE id = ?`,
       [result.insertId]

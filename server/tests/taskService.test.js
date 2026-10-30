@@ -377,6 +377,22 @@ describe("Task assignment", () => {
     );
   });
 
+  test("includes due dates and assigned user names in task listings", async () => {
+    pool.execute.mockResolvedValueOnce([[]]);
+
+    await taskService.getTasks({
+      id: 7,
+      role: "TEAM_MEMBER",
+    });
+
+    const [query, parameters] = pool.execute.mock.calls[0];
+    expect(query).toContain("t.due_date");
+    expect(query).toContain("assigned_user.full_name AS assigned_to_name");
+    expect(query).toContain("LEFT JOIN users assigned_user");
+    expect(query).toContain("WHERE t.assigned_to = ?");
+    expect(parameters).toEqual([7]);
+  });
+
   test.each([
     ["ADMIN", undefined],
     ["ADMIN", "   "],

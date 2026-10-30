@@ -1,15 +1,17 @@
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   assignTask,
   updateTaskStatus,
   getTaskHistory,
-  getTeamMembers,
 } from "../api/tasksApi";
 
 function TaskCard({
   task,
   user,
+  teamMembers = [],
+  teamMembersLoading,
+  teamMembersError,
   onStatusUpdated,
   onTaskAssigned,
 }) {
@@ -17,9 +19,6 @@ function TaskCard({
   const [error, setError] = useState("");
   const [comment, setComment] = useState("");
 
-  const [teamMembers, setTeamMembers] = useState([]);
-  const [teamMembersLoading, setTeamMembersLoading] =
-    useState(false);
   const [selectedAssignee, setSelectedAssignee] = useState(
     String(
       task.assigned_to ??
@@ -85,63 +84,6 @@ function TaskCard({
     COMPLETED: "Approve & complete",
     CHANGES_REQUESTED: "Request changes",
   };
-
-  // Load active team members for ADMIN and MANAGER.
-  useEffect(() => {
-    if (!canAssignTasks) return;
-
-    let cancelled = false;
-
-    async function loadTeamMembers() {
-      setTeamMembersLoading(true);
-      setAssignmentError("");
-
-      try {
-        const members = await getTeamMembers();
-
-        if (!cancelled) {
-          setTeamMembers(
-            Array.isArray(members) ? members : []
-          );
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setAssignmentError(
-            err.response?.data?.message ||
-              err.message ||
-              "Unable to load team members."
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setTeamMembersLoading(false);
-        }
-      }
-    }
-
-    loadTeamMembers();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [canAssignTasks]);
-
-  // Keep the dropdown synchronized when task data changes.
-  useEffect(() => {
-    const currentAssignee =
-      task.assigned_to ??
-      task.assignedTo ??
-      task.assigned_to_id ??
-      task.assignedToId ??
-      "";
-
-    setSelectedAssignee(String(currentAssignee));
-  }, [
-    task.assigned_to,
-    task.assignedTo,
-    task.assigned_to_id,
-    task.assignedToId,
-  ]);
 
   async function handleAssignTask() {
     if (!selectedAssignee) {
@@ -294,6 +236,27 @@ function TaskCard({
     return parsedDate.toLocaleString();
   }
 
+  function formatDueDate(date) {
+    if (!date) return "No due date";
+
+    const dateString = date instanceof Date
+      ? date.toISOString().slice(0, 10)
+      : String(date).slice(0, 10);
+    const [year, month, day] = dateString.split("-").map(Number);
+    const parsedDate = new Date(Date.UTC(year, month - 1, day));
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      return "No due date";
+    }
+
+    return new Intl.DateTimeFormat(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    }).format(parsedDate);
+  }
+
   const assignedMember = teamMembers.find(
     (member) =>
       String(member.id) ===
@@ -334,6 +297,7 @@ function TaskCard({
         <span>
           Assigned to: {assignedName || "Unassigned"}
         </span>
+        <span>Due: {formatDueDate(task.due_date)}</span>
       </div>
 
       {canAssignTasks && (
@@ -352,7 +316,9 @@ function TaskCard({
                 setAssignmentMessage("");
               }}
               disabled={
-                teamMembersLoading || assignmentLoading
+                teamMembersLoading ||
+                assignmentLoading ||
+                Boolean(teamMembersError)
               }
             >
               <option value="">Select a team member</option>
@@ -371,6 +337,7 @@ function TaskCard({
               disabled={
                 teamMembersLoading ||
                 assignmentLoading ||
+                Boolean(teamMembersError) ||
                 !selectedAssignee
               }
             >
@@ -385,6 +352,12 @@ function TaskCard({
           {assignmentError && (
             <p className="inline-error" role="alert">
               {assignmentError}
+            </p>
+          )}
+
+          {teamMembersError && (
+            <p className="inline-error" role="alert">
+              Unable to load team members: {teamMembersError}
             </p>
           )}
 

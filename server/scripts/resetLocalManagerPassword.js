@@ -7,8 +7,23 @@ const bcrypt = require("bcrypt");
 const pool = require("../src/config/db");
 
 async function main() {
-  const email = "manager.test@taskflow.local";
-  const temporaryPassword = "LocalManager@2026";
+  if (
+    process.env.NODE_ENV === "production" ||
+    process.env.ALLOW_LOCAL_MANAGER_PASSWORD_RESET !== "true"
+  ) {
+    throw new Error(
+      "This local-only utility requires ALLOW_LOCAL_MANAGER_PASSWORD_RESET=true outside production."
+    );
+  }
+
+  const email = process.env.LOCAL_MANAGER_EMAIL?.trim().toLowerCase();
+  const temporaryPassword = process.env.LOCAL_MANAGER_PASSWORD;
+
+  if (!email || !temporaryPassword) {
+    throw new Error(
+      "Set LOCAL_MANAGER_EMAIL and LOCAL_MANAGER_PASSWORD in the local environment."
+    );
+  }
 
   const passwordHash = await bcrypt.hash(temporaryPassword, 12);
 

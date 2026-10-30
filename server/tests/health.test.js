@@ -22,6 +22,26 @@ describe("GET /api/health", () => {
       message: "TaskFlow AI API is running",
     });
   });
+
+  test("allows requests from the deployed frontend origin", async () => {
+    const response = await request(app)
+      .get("/api/health")
+      .set("Origin", "https://taskflow-ai-frontend-mukm.onrender.com");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["access-control-allow-origin"]).toBe(
+      "https://taskflow-ai-frontend-mukm.onrender.com"
+    );
+  });
+
+  test("does not allow requests from unknown browser origins", async () => {
+    const response = await request(app)
+      .get("/api/health")
+      .set("Origin", "https://untrusted.example");
+
+    expect(response.status).toBe(200);
+    expect(response.headers["access-control-allow-origin"]).toBeUndefined();
+  });
 });
 
 describe("GET /api/health/db", () => {

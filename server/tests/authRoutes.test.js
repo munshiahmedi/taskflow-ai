@@ -1,6 +1,18 @@
 
-const request = require("supertest");
+const supertest = require("supertest");
 const jwt = require("jsonwebtoken");
+
+let requestCount = 0;
+const request = (app) => {
+  const ipAddress = `192.0.2.${++requestCount}`;
+
+  return {
+    get: (path) =>
+      supertest(app).get(path).set("X-Forwarded-For", ipAddress),
+    post: (path) =>
+      supertest(app).post(path).set("X-Forwarded-For", ipAddress),
+  };
+};
 
 jest.mock("../src/config/db", () => ({
   execute: jest.fn(),
@@ -143,11 +155,48 @@ describe("POST /api/auth/register", () => {
     expect(authService.registerUser).not.toHaveBeenCalled();
   });
 
+  test("rejects a password longer than 72 UTF-8 bytes", async () => {
+    const response = await request(app)
+      .post("/api/auth/register")
+      .send({
+        fullName: "Test User",
+        email: "test@example.com",
+        password: "é".repeat(37),
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toContain("72 UTF-8 bytes");
+    expect(authService.registerUser).not.toHaveBeenCalled();
+  });
+
+  test("returns a conflict for a duplicate email", async () => {
+    const duplicateError = Object.assign(
+      new Error("Email is already registered"),
+      { statusCode: 409 }
+    );
+    authService.registerUser.mockRejectedValueOnce(duplicateError);
+
+    const response = await request(app)
+      .post("/api/auth/register")
+      .send({
+        fullName: "Test User",
+        email: "test@example.com",
+        password: "Password123",
+      });
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      success: false,
+      message: "Email is already registered",
+    });
+  });
+
   test("registers a valid user and normalizes email", async () => {
     authService.registerUser.mockResolvedValueOnce({
       id: 1,
       fullName: "Test User",
       email: "test@example.com",
+      role: "TEAM_MEMBER",
     });
 
     const response = await request(app)
@@ -156,14 +205,49 @@ describe("POST /api/auth/register", () => {
         fullName: " Test User ",
         email: "TEST@example.com",
         password: "Password123",
+        role: "ADMIN",
       });
 
     expect(response.status).toBe(201);
     expect(response.body.success).toBe(true);
+    expect(response.body.user).toEqual({
+      id: 1,
+      fullName: "Test User",
+      email: "test@example.com",
+      role: "TEAM_MEMBER",
+    });
+    expect(JSON.stringify(response.body)).not.toContain("password");
     expect(authService.registerUser).toHaveBeenCalledWith({
       fullName: "Test User",
       email: "test@example.com",
       password: "Password123",
+    });
+  });
+
+  test("does not return a password hash even if the service object has one", async () => {
+    authService.registerUser.mockResolvedValueOnce({
+      id: 1,
+      fullName: "Test User",
+      email: "test@example.com",
+      role: "TEAM_MEMBER",
+      password_hash: "must-not-be-returned",
+    });
+
+    const response = await request(app)
+      .post("/api/auth/register")
+      .send({
+        fullName: "Test User",
+        email: "test@example.com",
+        password: "Password123",
+      });
+
+    expect(response.status).toBe(201);
+    expect(JSON.stringify(response.body)).not.toContain("must-not-be-returned");
+    expect(response.body.user).toEqual({
+      id: 1,
+      fullName: "Test User",
+      email: "test@example.com",
+      role: "TEAM_MEMBER",
     });
   });
 });

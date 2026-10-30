@@ -96,9 +96,11 @@ async function createTask({ engagementId, title, description, createdBy, role })
 async function getTasks(user) {
   let sql = `
     SELECT t.id, t.engagement_id, t.title, t.description,
-           t.created_by, t.assigned_to, t.status, t.created_at
+           t.created_by, t.assigned_to, t.status, t.due_date,
+           assigned_user.full_name AS assigned_to_name, t.created_at
     FROM tasks t
     LEFT JOIN engagements e ON e.id = t.engagement_id
+    LEFT JOIN users assigned_user ON assigned_user.id = t.assigned_to
   `;
 
   const params = [];

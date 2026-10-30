@@ -97,7 +97,12 @@ async function register(req, res) {
     return res.status(201).json({
       success: true,
       message: "Registration successful",
-      user,
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+      },
     });
   } catch (error) {
     if (!error?.statusCode || error.statusCode >= 500) {

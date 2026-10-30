@@ -3,16 +3,19 @@ import { useEffect, useRef, useState } from "react";
 import { assignTask, createTask } from "../api/tasksApi";
 import api from "../api/axios";
 
-function CreateTaskForm({ onTaskCreated, user }) {
+function CreateTaskForm({
+  onTaskCreated,
+  user,
+  teamMembers = [],
+  teamMembersLoading = false,
+  teamMembersError = "",
+}) {
   const [engagements, setEngagements] = useState([]);
   const [engagementId, setEngagementId] = useState("");
   const [engagementsLoading, setEngagementsLoading] = useState(true);
   const [engagementError, setEngagementError] = useState("");
 
   const canAssignTasks = ["ADMIN", "MANAGER"].includes(user?.role);
-  const [teamMembers, setTeamMembers] = useState([]);
-  const [teamMembersLoading, setTeamMembersLoading] = useState(false);
-  const [teamMembersError, setTeamMembersError] = useState("");
   const [assignedMemberId, setAssignedMemberId] = useState("");
 
   const [title, setTitle] = useState("");
@@ -120,31 +123,6 @@ function CreateTaskForm({ onTaskCreated, user }) {
 
     loadEngagements();
   }, []);
-
-  useEffect(() => {
-    if (!canAssignTasks) {
-      return;
-    }
-
-    async function loadTeamMembers() {
-      setTeamMembersLoading(true);
-
-      try {
-        const response = await api.get("/users/team-members");
-        setTeamMembers(response.data.members || []);
-      } catch (err) {
-        setTeamMembersError(
-          err.response?.data?.message ||
-            err.message ||
-            "Unable to load team members"
-        );
-      } finally {
-        setTeamMembersLoading(false);
-      }
-    }
-
-    loadTeamMembers();
-  }, [canAssignTasks]);
 
   async function handleCreateTask(event) {
     event.preventDefault();
