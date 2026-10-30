@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import api from "../api/axios";
 import { getDashboardStats } from "../api/dashboardApi";
@@ -47,10 +47,19 @@ describe("TasksPage role-based workspace", () => {
     );
 
     expect(await screen.findByText(roleLabel)).toBeVisible();
+    expect(screen.getByRole("heading", { name: /good to see you/i })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Create a task" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("link", { name: /^tasks$/i }));
+    expect(await screen.findByRole("heading", { name: "Task history" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Task overview" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("link", { name: /create task/i }));
     expect(
       screen.getByRole("link", { name: /create task/i })
     ).toHaveAttribute("href", "#create-task");
     expect(screen.getByRole("heading", { name: "Create a task" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Task history" })).not.toBeInTheDocument();
   });
 
   it("keeps task creation hidden for team members", async () => {
@@ -66,6 +75,14 @@ describe("TasksPage role-based workspace", () => {
     expect(
       screen.queryByRole("link", { name: /create task/i })
     ).not.toBeInTheDocument();
+    expect(screen.queryByText("Work assigned to you")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("link", { name: /^tasks$/i }));
     expect(screen.getByText("Work assigned to you")).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Task history" })).toBeVisible();
+
+    fireEvent.click(screen.getByRole("link", { name: "Overview" }));
+    expect(screen.getByRole("heading", { name: "Task overview" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Task history" })).not.toBeInTheDocument();
   });
 });

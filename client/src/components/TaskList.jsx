@@ -38,7 +38,7 @@ function TaskList({
     >
       <div className="section-heading">
         <div>
-          <h2 id="task-list-title">Tasks</h2>
+          <h2 id="task-list-title">Task history</h2>
           <p className="section-description">
             Find tasks and follow work through each stage.
           </p>

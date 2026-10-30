@@ -333,81 +333,85 @@ function TasksPage({ user, onLogout }) {
             </div>
           </header>
 
-          <section className="welcome" id="overview">
-            <div>
-              <p className="eyebrow">Your workspace · {roleLabel}</p>
-              <h1>Good to see you, {firstName}.</h1>
+          {activeSection === "overview" && (
+            <>
+              <section className="welcome" id="overview">
+                <div>
+                  <p className="eyebrow">Your workspace · {roleLabel}</p>
+                  <h1>Good to see you, {firstName}.</h1>
 
-              <p className="welcome-copy">{welcomeMessage}</p>
-            </div>
+                  <p className="welcome-copy">{welcomeMessage}</p>
+                </div>
 
-            {healthLoading ? (
-              <span className="connection-pill">
-                <span className="loading-dot" />
-                Checking connection
-              </span>
-            ) : healthError ? (
-              <span className="connection-pill connection-pill--offline">
-                Connection issue
-              </span>
-            ) : (
-              <span className="connection-pill">
-                {health?.message || "Workspace connected"}
-              </span>
-            )}
-          </section>
+                {healthLoading ? (
+                  <span className="connection-pill">
+                    <span className="loading-dot" />
+                    Checking connection
+                  </span>
+                ) : healthError ? (
+                  <span className="connection-pill connection-pill--offline">
+                    Connection issue
+                  </span>
+                ) : (
+                  <span className="connection-pill">
+                    {health?.message || "Workspace connected"}
+                  </span>
+                )}
+              </section>
 
-          <section
-            className="dashboard-section"
-            aria-label="Dashboard statistics"
-          >
-            <div className="section-heading">
-              <div>
-                <h2>Task overview</h2>
-                <p className="section-description">{statisticsScope}</p>
-              </div>
+              <section
+                className="dashboard-section"
+                aria-label="Dashboard statistics"
+              >
+                <div className="section-heading">
+                  <div>
+                    <h2>Task overview</h2>
+                    <p className="section-description">{statisticsScope}</p>
+                  </div>
 
-              {stats && (
-                <span className="section-meta">Live workspace totals</span>
+                  {stats && (
+                    <span className="section-meta">Live workspace totals</span>
+                  )}
+                </div>
+
+                {statsLoading && (
+                  <p className="section-description">
+                    Loading dashboard statistics…
+                  </p>
+                )}
+
+                {statsError && (
+                  <p className="dashboard-error" role="alert">
+                    Dashboard error: {statsError}
+                  </p>
+                )}
+
+                {stats && (
+                  <div className="stats-grid">
+                    {dashboardCards.map((card) => (
+                      <article
+                        key={card.key}
+                        className={`stat-card stat-card--${card.key}`}
+                      >
+                        <p className="stat-card__label">{card.label}</p>
+                        <strong className="stat-card__value">
+                          {stats[card.key] ?? 0}
+                        </strong>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              {healthError && (
+                <p className="dashboard-error" role="alert">
+                  Unable to reach the backend: {healthError}
+                </p>
               )}
-            </div>
-
-            {statsLoading && (
-              <p className="section-description">
-                Loading dashboard statistics…
-              </p>
-            )}
-
-            {statsError && (
-              <p className="dashboard-error" role="alert">
-                Dashboard error: {statsError}
-              </p>
-            )}
-
-            {stats && (
-              <div className="stats-grid">
-                {dashboardCards.map((card) => (
-                  <article
-                    key={card.key}
-                    className={`stat-card stat-card--${card.key}`}
-                  >
-                    <p className="stat-card__label">{card.label}</p>
-                    <strong className="stat-card__value">
-                      {stats[card.key] ?? 0}
-                    </strong>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {healthError && (
-            <p className="dashboard-error" role="alert">
-              Unable to reach the backend: {healthError}
-            </p>
+            </>
           )}
 
-          {canCreateTasks ? (
+          {activeSection === "create-task" && canCreateTasks && (
             <section className="dashboard-section" id="create-task">
               <CreateTaskForm
                 user={user}
@@ -417,34 +421,40 @@ function TasksPage({ user, onLogout }) {
                 onTaskCreated={handleTaskCreated}
               />
             </section>
-          ) : (
-            <p className="system-notice">
-              <strong>Work assigned to you</strong> — review your tasks
-              below and update their status as work progresses.
-            </p>
           )}
 
-          <section className="dashboard-section" id="tasks" aria-label="Tasks">
-            {tasksLoading ? (
-              <div className="task-section">
-                <p className="section-description">Loading your tasks…</p>
-              </div>
-            ) : tasksError ? (
-              <p className="dashboard-error" role="alert">
-                Unable to load tasks: {tasksError}
-              </p>
-            ) : (
-              <TaskList
-                tasks={tasks}
-                user={user}
-                teamMembers={teamMembers}
-                teamMembersLoading={teamMembersLoading}
-                teamMembersError={teamMembersError}
-                onStatusUpdated={handleStatusUpdated}
-                onTaskAssigned={handleTaskAssigned}
-              />
-            )}
-          </section>
+          {activeSection === "tasks" && (
+            <>
+              {!canCreateTasks && (
+                <p className="system-notice">
+                  <strong>Work assigned to you</strong> — review your tasks
+                  below and update their status as work progresses.
+                </p>
+              )}
+
+              <section className="dashboard-section" id="tasks" aria-label="Tasks">
+                {tasksLoading ? (
+                  <div className="task-section">
+                    <p className="section-description">Loading your tasks…</p>
+                  </div>
+                ) : tasksError ? (
+                  <p className="dashboard-error" role="alert">
+                    Unable to load tasks: {tasksError}
+                  </p>
+                ) : (
+                  <TaskList
+                    tasks={tasks}
+                    user={user}
+                    teamMembers={teamMembers}
+                    teamMembersLoading={teamMembersLoading}
+                    teamMembersError={teamMembersError}
+                    onStatusUpdated={handleStatusUpdated}
+                    onTaskAssigned={handleTaskAssigned}
+                  />
+                )}
+              </section>
+            </>
+          )}
         </main>
       </div>
     </div>
